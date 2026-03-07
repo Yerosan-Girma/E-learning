@@ -14,6 +14,15 @@ desktop.ini
 # Logs
 *.log
 
+# Node / frontend build output
+node_modules/
+dist/
+react-app/dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Java / Maven build output
 target/
 *.class
@@ -28,4 +37,3 @@ __pycache__/
 *.pyd
 .pytest_cache/
 .mypy_cache/
-
