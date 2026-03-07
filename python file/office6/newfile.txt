@@ -1,0 +1,14 @@
+
+Write a Python program that accept some words and count the 
+numberhe example usage now creates the file if it doesn't exist,
+ making the script self-contained and easier to test. 
+ It also includes an example of opening the file and then checking its 
+ closed statuhe example usage now creates the file if it doesn't exist, 
+ making the script self-contained and easier to test. It also includes an example of 
+ opening the file and then checking its closed status.sv
+
+ 
+ 
+
+
+

@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - EduLearn</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Google Fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Chart.js for Progress Charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+  </head>
+  <body>
+    <!-- Navigation Bar -->
+    <nav
+      class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top"
+    >
+      <div class="container">
+        <a class="navbar-brand fw-bold text-primary fs-3" href="index.html">
+          <i class="fas fa-graduation-cap me-2"></i>EduLearn
+        </a>
+
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <!-- Home -->
+            <li class="nav-item">
+              <a class="nav-link" href="index.html">
+                <i class="fas fa-home me-1"></i> Home
+              </a>
+            </li>
+
+            <!-- About -->
+            <li class="nav-item">
+              <a class="nav-link" href="index.html#about">
+                <i class="fas fa-info-circle me-1"></i> About
+              </a>
+            </li>
+
+            <!-- Courses -->
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                id="coursesDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <i class="fas fa-book me-1"></i> Courses
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="coursesDropdown">
+                <li>
+                  <a class="dropdown-item" href="courses.html">All Courses</a>
+                </li>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="courses.html?category=development"
+                    >Web Development</a
+                  >
+                </li>
+                <li>
+                  <a
+                    class="dropdown-item"
+                    href="courses.html?category=data-science"
+                    >Data Science</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" href="courses.html?category=design"
+                    >UI/UX Design</a
+                  >
+                </li>
+                <li>
+                  <a class="dropdown-item" href="courses.html?category=business"
+                    >Business</a
+                  >
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item" href="courses.html?price=free"
+                    >Free Courses</a
+                  >
+                </li>
+              </ul>
+            </li>
+
+            <!-- Dashboard (Active) -->
+            <li class="nav-item">
+              <a
+                class="btn btn-outline-primary ms-2 active"
+                href="dashboard.html"
+              >
+                <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+              </a>
+            </li>
+
+            <!-- Logout Button -->
+            <li class="nav-item">
+              <button class="btn btn-primary ms-2" id="logoutBtn">
+                <i class="fas fa-sign-out-alt me-1"></i> Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Dashboard Content -->
+    <div class="container py-5 mt-5">
+      <!-- Welcome Section -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <h1 class="fw-bold mb-2">
+                Welcome Back,
+                <span id="userName" class="text-primary">Student</span>! 👋
+              </h1>
+              <p class="text-muted mb-0">
+                Track your learning journey and stay on top of your studies
+              </p>
+            </div>
+            <div class="text-end">
+              <div class="badge bg-success p-2">
+                <i class="fas fa-medal me-1"></i> Active Learner
+              </div>
+              <p class="small text-muted mt-1 mb-0">
+                Last login: Today, 09:45 AM
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="row mb-5">
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="stats-card">
+            <div class="stats-icon primary">
+              <i class="fas fa-book-open"></i>
+            </div>
+            <h3 class="fw-bold mb-1" id="enrolledCourses">5</h3>
+            <p class="text-muted mb-0">Enrolled Courses</p>
+            <div class="progress mt-2" style="height: 4px">
+              <div
+                class="progress-bar"
+                role="progressbar"
+                style="width: 75%"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="stats-card">
+            <div class="stats-icon success">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <h3 class="fw-bold mb-1" id="completedLessons">24</h3>
+            <p class="text-muted mb-0">Completed Lessons</p>
+            <div class="progress mt-2" style="height: 4px">
+              <div
+                class="progress-bar bg-success"
+                role="progressbar"
+                style="width: 65%"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="stats-card">
+            <div class="stats-icon warning">
+              <i class="fas fa-clock"></i>
+            </div>
+            <h3 class="fw-bold mb-1" id="studyHours">42.5</h3>
+            <p class="text-muted mb-0">Study Hours</p>
+            <div class="progress mt-2" style="height: 4px">
+              <div
+                class="progress-bar bg-warning"
+                role="progressbar"
+                style="width: 85%"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="stats-card">
+            <div class="stats-icon info">
+              <i class="fas fa-chart-line"></i>
+            </div>
+            <h3 class="fw-bold mb-1" id="avgScore">88%</h3>
+            <p class="text-muted mb-0">Average Score</p>
+            <div class="progress mt-2" style="height: 4px">
+              <div
+                class="progress-bar bg-info"
+                role="progressbar"
+                style="width: 88%"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- Sidebar -->
+        <div class="col-lg-3 mb-4">
+          <div class="sidebar">
+            <!-- User Profile -->
+            <div class="text-center mb-4">
+              <div class="position-relative d-inline-block">
+                <img
+                  src="images\sG56quewnSFLEAs7.jpg"
+                  alt="User"
+                  class="user-avatar mb-3"
+                />
+                <span
+                  class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-3 border-white p-1"
+                >
+                  <i
+                    class="fas fa-circle text-success"
+                    style="font-size: 10px"
+                  ></i>
+                </span>
+              </div>
+              <h5 class="fw-bold mb-1" id="dashboardUserName">yerosan Girma</h5>
+              <p class="text-muted small mb-3" id="dashboardUserEmail">
+                admin@edulearn.com
+              </p>
+
+              <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                  <span class="small">Overall Progress</span>
+                  <span class="small fw-bold" id="overallProgress">78%</span>
+                </div>
+                <div class="progress" style="height: 8px">
+                  <div
+                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    style="width: 78%"
+                  ></div>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-around">
+                <div class="text-center">
+                  <h6 class="fw-bold mb-0">12</h6>
+                  <small class="text-muted">Streak</small>
+                </div>
+                <div class="text-center">
+                  <h6 class="fw-bold mb-0">A-</h6>
+                  <small class="text-muted">Grade</small>
+                </div>
+                <div class="text-center">
+                  <h6 class="fw-bold mb-0">85%</h6>
+                  <small class="text-muted">Attendance</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dashboard Navigation -->
+            <nav class="dashboard-nav">
+              <div class="nav flex-column">
+                <a class="nav-link active" href="#dashboardHome">
+                  <i class="fas fa-tachometer-alt me-2"></i> Overview
+                </a>
+                <a class="nav-link" href="#myCourses">
+                  <i class="fas fa-book me-2"></i> My Courses
+                </a>
+                <a class="nav-link" href="#progress">
+                  <i class="fas fa-chart-line me-2"></i> Progress Analytics
+                </a>
+                <a class="nav-link" href="#quizzes">
+                  <i class="fas fa-question-circle me-2"></i> Quizzes
+                </a>
+                <a class="nav-link" href="#exams">
+                  <i class="fas fa-file-alt me-2"></i> Exams
+                </a>
+                <a class="nav-link" href="#assignments">
+                  <i class="fas fa-tasks me-2"></i> Assignments
+                </a>
+                <a class="nav-link" href="#discussions">
+                  <i class="fas fa-comments me-2"></i> Discussions
+                </a>
+                <a class="nav-link" href="#certificates">
+                  <i class="fas fa-certificate me-2"></i> Certificates
+                </a>
+                <a class="nav-link" href="#resources">
+                  <i class="fas fa-download me-2"></i> Resources
+                </a>
+                <a class="nav-link" href="#settings">
+                  <i class="fas fa-cog me-2"></i> Settings
+                </a>
+              </div>
+            </nav>
+
+            <!-- Upcoming Events -->
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="fw-bold mb-3">
+                <i class="fas fa-calendar-alt me-2"></i> Today's Schedule
+              </h6>
+              <div class="list-group list-group-flush">
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <span class="badge bg-primary p-1">10:00</span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <small class="fw-bold">Live Class</small>
+                      <small class="d-block text-muted">Web Development</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <span class="badge bg-warning p-1">14:00</span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <small class="fw-bold">Quiz Deadline</small>
+                      <small class="d-block text-muted">Data Science</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="list-group-item border-0 px-0 py-2">
+                  <div class="d-flex">
+                    <div class="flex-shrink-0">
+                      <span class="badge bg-info p-1">16:30</span>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                      <small class="fw-bold">Group Discussion</small>
+                      <small class="d-block text-muted"
+                        >Design Principles</small
+                      >
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-lg-9">
+          <!-- Progress Analytics Section -->
+          <div class="card mb-4" id="progress">
+            <div
+              class="card-header bg-white d-flex justify-content-between align-items-center"
+            >
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-chart-line me-2 text-primary"></i>Progress
+                Analytics
+              </h4>
+              <div class="dropdown">
+                <button
+                  class="btn btn-sm btn-outline-primary dropdown-toggle"
+                  type="button"
+                  data-bs-toggle="dropdown"
+                >
+                  Last 30 Days
+                </button>
+                <ul class="dropdown-menu">
+                  <li><a class="dropdown-item" href="#">Last 7 Days</a></li>
+                  <li><a class="dropdown-item" href="#">Last 30 Days</a></li>
+                  <li><a class="dropdown-item" href="#">Last 90 Days</a></li>
+                </ul>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-8">
+                  <div
+                    class="chart-container"
+                    style="position: relative; height: 300px"
+                  >
+                    <canvas id="progressChart"></canvas>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="mb-4">
+                    <h6 class="fw-bold">Performance Breakdown</h6>
+                    <div class="d-flex align-items-center mb-2">
+                      <div class="flex-shrink-0">
+                        <div
+                          class="rounded-circle bg-primary"
+                          style="width: 12px; height: 12px"
+                        ></div>
+                      </div>
+                      <div class="flex-grow-1 ms-2">
+                        <small>Quizzes</small>
+                        <div class="d-flex justify-content-between">
+                          <small class="text-muted">Average: 85%</small>
+                          <small class="fw-bold">↑ 12%</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <div class="flex-shrink-0">
+                        <div
+                          class="rounded-circle bg-success"
+                          style="width: 12px; height: 12px"
+                        ></div>
+                      </div>
+                      <div class="flex-grow-1 ms-2">
+                        <small>Assignments</small>
+                        <div class="d-flex justify-content-between">
+                          <small class="text-muted">Average: 92%</small>
+                          <small class="fw-bold">↑ 8%</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                      <div class="flex-shrink-0">
+                        <div
+                          class="rounded-circle bg-warning"
+                          style="width: 12px; height: 12px"
+                        ></div>
+                      </div>
+                      <div class="flex-grow-1 ms-2">
+                        <small>Participation</small>
+                        <div class="d-flex justify-content-between">
+                          <small class="text-muted">Score: 78%</small>
+                          <small class="fw-bold">↑ 5%</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="card border-0 bg-light">
+                    <div class="card-body">
+                      <h6 class="fw-bold mb-3">Learning Streak</h6>
+                      <div class="d-flex align-items-center mb-3">
+                        <i class="fas fa-fire text-danger fa-2x me-3"></i>
+                        <div>
+                          <h4 class="fw-bold mb-0">12 Days</h4>
+                          <small class="text-muted">Keep it up!</small>
+                        </div>
+                      </div>
+                      <div class="streak-calendar">
+                        <!-- Streak days will be generated by JavaScript -->
+                        <div id="streakDays"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quizzes Section -->
+          <div class="card mb-4" id="quizzes">
+            <div
+              class="card-header bg-white d-flex justify-content-between align-items-center"
+            >
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-question-circle me-2 text-primary"></i>Quizzes
+              </h4>
+              <a href="#allQuizzes" class="btn btn-sm btn-primary"
+                >Take New Quiz</a
+              >
+            </div>
+            <div class="card-body">
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body">
+                      <h6 class="fw-bold">Upcoming Quizzes</h6>
+                      <div
+                        class="list-group list-group-flush"
+                        id="upcomingQuizzes"
+                      >
+                        <!-- Upcoming quizzes will be loaded here -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card border-0 bg-light h-100">
+                    <div class="card-body">
+                      <h6 class="fw-bold">Recent Quiz Results</h6>
+                      <div class="list-group list-group-flush" id="quizResults">
+                        <!-- Quiz results will be loaded here -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Quiz</th>
+                      <th>Course</th>
+                      <th>Date</th>
+                      <th>Score</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="quizzesTable">
+                    <!-- Quizzes will be loaded here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exams Section -->
+          <div class="card mb-4" id="exams">
+            <div
+              class="card-header bg-white d-flex justify-content-between align-items-center"
+            >
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-file-alt me-2 text-primary"></i>Final Exams
+              </h4>
+              <span class="badge bg-warning">2 Upcoming</span>
+            </div>
+            <div class="card-body">
+              <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>
+                Final exams are comprehensive assessments covering all course
+                material. Please prepare thoroughly.
+              </div>
+
+              <div class="row" id="examCards">
+                <!-- Exam cards will be loaded here -->
+              </div>
+
+              <div class="mt-4">
+                <h6 class="fw-bold mb-3">Exam Preparation Checklist</h6>
+                <div class="row">
+                  <div class="col-md-6">
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check1"
+                      />
+                      <label class="form-check-label" for="check1">
+                        Review all lecture notes
+                      </label>
+                    </div>
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check2"
+                      />
+                      <label class="form-check-label" for="check2">
+                        Complete practice questions
+                      </label>
+                    </div>
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check3"
+                      />
+                      <label class="form-check-label" for="check3">
+                        Attend review session
+                      </label>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check4"
+                      />
+                      <label class="form-check-label" for="check4">
+                        Form study group
+                      </label>
+                    </div>
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check5"
+                      />
+                      <label class="form-check-label" for="check5">
+                        Review previous quizzes
+                      </label>
+                    </div>
+                    <div class="form-check mb-2">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        id="check6"
+                      />
+                      <label class="form-check-label" for="check6">
+                        Get good rest before exam
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignments Section -->
+          <div class="card mb-4" id="assignments">
+            <div
+              class="card-header bg-white d-flex justify-content-between align-items-center"
+            >
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-tasks me-2 text-primary"></i>Assignments
+              </h4>
+              <a href="#" class="btn btn-sm btn-outline-primary"
+                >Submit Assignment</a
+              >
+            </div>
+            <div class="card-body">
+              <div class="row mb-4">
+                <div class="col-md-4">
+                  <div class="card border-0 bg-primary text-white">
+                    <div class="card-body text-center py-3">
+                      <h5 class="fw-bold mb-0" id="pendingAssignments">3</h5>
+                      <small>Pending</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="card border-0 bg-success text-white">
+                    <div class="card-body text-center py-3">
+                      <h5 class="fw-bold mb-0" id="submittedAssignments">8</h5>
+                      <small>Submitted</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="card border-0 bg-info text-white">
+                    <div class="card-body text-center py-3">
+                      <h5 class="fw-bold mb-0" id="gradedAssignments">6</h5>
+                      <small>Graded</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-hover">
+                  <thead>
+                    <tr>
+                      <th>Assignment</th>
+                      <th>Course</th>
+                      <th>Due Date</th>
+                      <th>Status</th>
+                      <th>Grade</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="assignmentsTable">
+                    <!-- Assignments will be loaded here -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Discussions Section -->
+          <div class="card mb-4" id="discussions">
+            <div
+              class="card-header bg-white d-flex justify-content-between align-items-center"
+            >
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-comments me-2 text-primary"></i>Discussions
+              </h4>
+              <a
+                href="#"
+                class="btn btn-sm btn-primary"
+                data-bs-toggle="modal"
+                data-bs-target="#newDiscussionModal"
+              >
+                <i class="fas fa-plus me-1"></i> New Topic
+              </a>
+            </div>
+            <div class="card-body">
+              <div class="row mb-4">
+                <div class="col-md-8">
+                  <div class="input-group">
+                    <input
+                      type="text"
+                      class="form-control"
+                      placeholder="Search discussions..."
+                    />
+                    <button class="btn btn-primary" type="button">
+                      <i class="fas fa-search"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <select class="form-select">
+                    <option>All Courses</option>
+                    <option>Web Development</option>
+                    <option>Data Science</option>
+                    <option>Digital Marketing</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="row" id="discussionTopics">
+                <!-- Discussion topics will be loaded here -->
+              </div>
+
+              <div class="mt-4">
+                <h6 class="fw-bold mb-3">My Recent Posts</h6>
+                <div class="list-group" id="myPosts">
+                  <!-- My posts will be loaded here -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Certificates Section -->
+          <div class="card mb-4" id="certificates">
+            <div class="card-header bg-white">
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-certificate me-2 text-primary"></i>Certificates
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row" id="certificatesList">
+                <!-- Certificates will be loaded here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- My Courses Section -->
+          <div class="card mb-4" id="myCourses">
+            <div class="card-header bg-white">
+              <h4 class="fw-bold mb-0">
+                <i class="fas fa-book me-2 text-primary"></i>My Courses
+              </h4>
+            </div>
+            <div class="card-body">
+              <div class="row" id="enrolledCoursesList">
+                <!-- Course cards will be loaded here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="card">
+            <div class="card-header bg-white">
+              <h4 class="fw-bold mb-0">Quick Actions</h4>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <a href="courses.html" class="btn btn-outline-primary w-100">
+                    <i class="fas fa-plus me-2"></i> New Course
+                  </a>
+                </div>
+                <div class="col-md-3">
+                  <a
+                    href="#"
+                    class="btn btn-outline-success w-100"
+                    id="continueLearningBtn"
+                  >
+                    <i class="fas fa-play me-2"></i> Continue
+                  </a>
+                </div>
+                <div class="col-md-3">
+                  <button
+                    class="btn btn-outline-info w-100"
+                    id="downloadProgressBtn"
+                  >
+                    <i class="fas fa-download me-2"></i> Report
+                  </button>
+                </div>
+                <div class="col-md-3">
+                  <button
+                    class="btn btn-outline-warning w-100"
+                    id="scheduleStudyBtn"
+                  >
+                    <i class="fas fa-calendar me-2"></i> Schedule
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New Discussion Modal -->
+    <div class="modal fade" id="newDiscussionModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Start New Discussion</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="newDiscussionForm">
+              <div class="mb-3">
+                <label class="form-label">Course</label>
+                <select class="form-select" required>
+                  <option value="">Select Course</option>
+                  <option value="1">Web Development Bootcamp</option>
+                  <option value="2">Data Science Fundamentals</option>
+                  <option value="3">Digital Marketing</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Topic Title</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Enter topic title"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Category</label>
+                <select class="form-select" required>
+                  <option value="">Select Category</option>
+                  <option value="question">Question</option>
+                  <option value="discussion">Discussion</option>
+                  <option value="help">Help Needed</option>
+                  <option value="resource">Resource Share</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Your Message</label>
+                <textarea
+                  class="form-control"
+                  rows="5"
+                  placeholder="Write your discussion topic here..."
+                  required
+                ></textarea>
+              </div>
+              <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="notifyMe" />
+                <label class="form-check-label" for="notifyMe"
+                  >Notify me when someone replies</label
+                >
+              </div>
+              <button type="submit" class="btn btn-primary">
+                Post Discussion
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer bg-dark text-white py-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4 mb-4">
+            <h4 class="fw-bold mb-3">
+              <i class="fas fa-graduation-cap me-2"></i>EduLearn
+            </h4>
+            <p class="text-light">
+              World's leading platform for online learning and skill
+              development.
+            </p>
+            <div class="social-icons mt-4">
+              <a href="#" class="text-white me-3"
+                ><i class="fab fa-facebook fa-lg"></i
+              ></a>
+              <a href="#" class="text-white me-3"
+                ><i class="fab fa-twitter fa-lg"></i
+              ></a>
+              <a href="#" class="text-white me-3"
+                ><i class="fab fa-linkedin fa-lg"></i
+              ></a>
+              <a href="#" class="text-white"
+                ><i class="fab fa-youtube fa-lg"></i
+              ></a>
+            </div>
+          </div>
+
+          <div class="col-lg-2 col-md-4 mb-4">
+            <h5 class="fw-bold mb-3">Platform</h5>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <a href="courses.html" class="text-light text-decoration-none"
+                  >Browse Courses</a
+                >
+              </li>
+              <li class="mb-2">
+                <a href="#" class="text-light text-decoration-none"
+                  >Become Instructor</a
+                >
+              </li>
+              <li class="mb-2">
+                <a href="#" class="text-light text-decoration-none"
+                  >For Business</a
+                >
+              </li>
+              <li>
+                <a href="#" class="text-light text-decoration-none"
+                  >Affiliate Program</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <div class="col-lg-2 col-md-4 mb-4">
+            <h5 class="fw-bold mb-3">Support</h5>
+            <ul class="list-unstyled">
+              <li class="mb-2">
+                <a href="#" class="text-light text-decoration-none"
+                  >Help Center</a
+                >
+              </li>
+              <li class="mb-2">
+                <a href="#" class="text-light text-decoration-none">FAQ</a>
+              </li>
+              <li class="mb-2">
+                <a href="#" class="text-light text-decoration-none"
+                  >Contact Us</a
+                >
+              </li>
+              <li>
+                <a href="#" class="text-light text-decoration-none"
+                  >Community</a
+                >
+              </li>
+            </ul>
+          </div>
+
+          <div class="col-lg-4 col-md-4 mb-4">
+            <h5 class="fw-bold mb-3">Stay Updated</h5>
+            <p class="text-light">
+              Get weekly updates on new courses and learning tips.
+            </p>
+            <div class="input-group mb-3">
+              <input
+                type="email"
+                class="form-control"
+                placeholder="Your email address"
+              />
+              <button class="btn btn-primary" type="button">Subscribe</button>
+            </div>
+          </div>
+        </div>
+
+        <hr class="bg-light" />
+
+        <div class="row pt-3">
+          <div class="col-md-6">
+            <p class="mb-0">© 2024 EduLearn. All rights reserved.</p>
+          </div>
+          <div class="col-md-6 text-md-end">
+            <a href="#" class="text-light text-decoration-none me-3"
+              >Privacy Policy</a
+            >
+            <a href="#" class="text-light text-decoration-none"
+              >Terms of Service</a
+            >
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>
