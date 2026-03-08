@@ -12,8 +12,7 @@ const baseCourses = [
     level: "Beginner",
     price: 89.99,
     discountPrice: 64.99,
-    image:
-      "c:/Users/pc/OneDrive/Desktop/PC/Distande education/frontend/react-app/public/images/yerosan.jpg",
+    image: "/images/courses/course-01.jpg",
     category: "Web Development",
     isFeatured: true,
     isFree: false,
@@ -32,8 +31,7 @@ const baseCourses = [
     level: "Intermediate",
     price: 99.99,
     discountPrice: 74.99,
-    image:
-      "https://images.unsplash.com/photo-1555949963-aa79dcee981c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-02.jpg",
     category: "Data Science",
     isFeatured: true,
     isFree: false,
@@ -52,8 +50,7 @@ const baseCourses = [
     level: "All Levels",
     price: 79.99,
     discountPrice: 59.99,
-    image:
-      "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-03.jpg",
     category: "Marketing",
     isFeatured: true,
     isFree: false,
@@ -72,8 +69,7 @@ const baseCourses = [
     level: "Intermediate",
     price: 74.99,
     discountPrice: 54.99,
-    image:
-      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-04.jpg",
     category: "Mobile Development",
     isFeatured: false,
     isFree: false,
@@ -92,8 +88,7 @@ const baseCourses = [
     level: "Beginner",
     price: 0,
     discountPrice: 0,
-    image:
-      "frontend/react-app/public/images/pythonimage.avif",
+    image: "/images/courses/course-05.jpg",
     category: "Programming",
     isFeatured: false,
     isFree: true,
@@ -113,8 +108,7 @@ const baseCourses = [
     level: "Beginner",
     price: 69.99,
     discountPrice: 49.99,
-    image:
-      "https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-06.jpg",
     category: "Design",
     isFeatured: false,
     isFree: false,
@@ -133,8 +127,7 @@ const baseCourses = [
     level: "Beginner",
     price: 59.99,
     discountPrice: 39.99,
-    image:
-      "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-07.jpg",
     category: "Business",
     isFeatured: false,
     isFree: false,
@@ -153,8 +146,7 @@ const baseCourses = [
     level: "Advanced",
     price: 89.99,
     discountPrice: 69.99,
-    image:
-      "https://images.unsplash.com/photo-1627398242454-45a1465c2479?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-08.jpg",
     category: "Web Development",
     isFeatured: false,
     isFree: false,
@@ -173,8 +165,7 @@ const baseCourses = [
     level: "Intermediate",
     price: 94.99,
     discountPrice: 74.99,
-    image:
-      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-09.jpg",
     category: "Security",
     isFeatured: false,
     isFree: false,
@@ -193,8 +184,7 @@ const baseCourses = [
     level: "All Levels",
     price: 84.99,
     discountPrice: 64.99,
-    image:
-      "https://images.unsplash.com/photo-1561070791-4c9b95a9e2a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-10.jpg",
     category: "Design",
     isFeatured: false,
     isFree: false,
@@ -213,8 +203,7 @@ const baseCourses = [
     level: "Intermediate",
     price: 99.99,
     discountPrice: 79.99,
-    image:
-      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-11.jpg",
     category: "Cloud",
     isFeatured: false,
     isFree: false,
@@ -233,8 +222,7 @@ const baseCourses = [
     level: "All Levels",
     price: 89.99,
     discountPrice: 69.99,
-    image:
-      "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+    image: "/images/courses/course-12.jpg",
     category: "Business",
     isFeatured: false,
     isFree: false,
