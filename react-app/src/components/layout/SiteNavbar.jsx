@@ -6,7 +6,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function SiteNavbar() {
   const location = useLocation();
-  const { isLoggedIn, user, openLoginModal, logout } = useAuth();
+  const { isLoggedIn, dashboardPath, logout } = useAuth();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
@@ -110,7 +110,7 @@ export default function SiteNavbar() {
 
             <li className="nav-item">
               <NavLink
-                to="/dashboard"
+                to={isLoggedIn ? dashboardPath : "/login"}
                 className={({ isActive }) =>
                   `btn btn-outline-primary ms-lg-2 ${isActive ? "active" : ""}`
                 }
@@ -122,12 +122,12 @@ export default function SiteNavbar() {
 
             <li className="nav-item">
               {!isLoggedIn ? (
-                <button className="btn btn-primary ms-lg-2" type="button" onClick={openLoginModal}>
+                <Link className="btn btn-primary ms-lg-2" to="/login" onClick={handleNavAction}>
                   <i className="fas fa-sign-in-alt me-1" /> Login
-                </button>
+                </Link>
               ) : (
                 <button className="btn btn-primary ms-lg-2" type="button" onClick={logout}>
-                  <i className="fas fa-sign-out-alt me-1" /> {user?.name || "Logout"}
+                  <i className="fas fa-sign-out-alt me-1" /> Logout
                 </button>
               )}
             </li>

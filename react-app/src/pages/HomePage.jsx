@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import CourseCard from "../components/common/CourseCard";
 import { FEATURED_COURSES } from "../data/courses";
 import { useAuth } from "../context/AuthContext";
@@ -12,7 +12,8 @@ const statsTargets = {
 };
 
 export default function HomePage() {
-  const { notify, openSignupModal } = useAuth();
+  const { notify } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ students: 0, courses: 0, instructors: 0, countries: 0 });
   const [contactForm, setContactForm] = useState({
     name: "",
@@ -226,7 +227,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <button type="button" className="btn btn-primary" onClick={openSignupModal}>
+              <button type="button" className="btn btn-primary" onClick={() => navigate("/login")}>
                 <i className="fas fa-arrow-right me-2" /> Get Started Free
               </button>
             </div>
@@ -440,7 +441,7 @@ export default function HomePage() {
               <p className="mb-0">Join thousands of successful students. No commitment, cancel anytime.</p>
             </div>
             <div className="col-lg-4 text-lg-end mt-3 mt-lg-0">
-              <button type="button" className="btn btn-light btn-lg px-5" onClick={openSignupModal}>
+              <button type="button" className="btn btn-light btn-lg px-5" onClick={() => navigate("/login")}>
                 Get Started Free <i className="fas fa-arrow-right ms-2" />
               </button>
             </div>

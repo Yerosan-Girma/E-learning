@@ -22,6 +22,9 @@ react-app/dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+Backend/.env
+Backend/uploads/*
+!Backend/uploads/.gitkeep
 
 # Java / Maven build output
 target/

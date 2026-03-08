@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import {
   BrowserRouter,
   Navigate,
@@ -7,15 +7,19 @@ import {
   useLocation,
   useSearchParams,
 } from "react-router-dom";
-import AuthModals from "./components/auth/AuthModals";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteFooter from "./components/layout/SiteFooter";
 import SiteNavbar from "./components/layout/SiteNavbar";
-import DashboardPage from "./pages/DashboardPage";
+import { useAuth } from "./context/AuthContext";
+import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import CoursesPage from "./pages/CoursesPage";
 import HomePage from "./pages/HomePage";
 import LearningPage from "./pages/LearningPage";
+import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import StudentDashboardPage from "./pages/StudentDashboardPage";
+import TeacherDashboardPage from "./pages/TeacherDashboardPage";
 
 function ScrollManager() {
   const location = useLocation();
@@ -48,21 +52,65 @@ function LegacyLearningRedirect() {
   return <Navigate to={`/learning/${id}`} replace />;
 }
 
+function DashboardRedirect() {
+  const { isLoggedIn, dashboardPath } = useAuth();
+  return <Navigate to={isLoggedIn ? dashboardPath : "/login"} replace />;
+}
+
 function AppShell() {
   const location = useLocation();
-  const isLearningPage = location.pathname.startsWith("/learning/");
+  const hideLayout =
+    location.pathname.startsWith("/learning/") || location.pathname === "/login";
 
   return (
     <>
       <ScrollManager />
-      {!isLearningPage && <SiteNavbar />}
+      {!hideLayout && <SiteNavbar />}
 
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailsPage />} />
-        <Route path="/learning/:courseId" element={<LearningPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
+
+        <Route
+          path="/learning/:courseId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <LearningPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/dashboard" element={<DashboardRedirect />} />
+
+        <Route
+          path="/dashboard/student"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/teacher"
+          element={
+            <ProtectedRoute allowedRoles={["teacher"]}>
+              <TeacherDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/dashboard/admin"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/index.html" element={<Navigate to="/" replace />} />
         <Route path="/courses.html" element={<Navigate to="/courses" replace />} />
@@ -73,8 +121,7 @@ function AppShell() {
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
 
-      {!isLearningPage && <SiteFooter />}
-      <AuthModals />
+      {!hideLayout && <SiteFooter />}
     </>
   );
 }

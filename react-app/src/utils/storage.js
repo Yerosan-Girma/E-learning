@@ -1,7 +1,10 @@
-﻿const AUTH_KEYS = {
+const AUTH_KEYS = {
   loggedIn: "userLoggedIn",
+  token: "authToken",
+  userId: "userId",
   name: "userName",
   email: "userEmail",
+  role: "userRole",
 };
 
 export function readJson(key, fallback) {
@@ -22,22 +25,35 @@ export function getAuthUser() {
   const loggedIn = localStorage.getItem(AUTH_KEYS.loggedIn) === "true";
   if (!loggedIn) return null;
 
-  const email = localStorage.getItem(AUTH_KEYS.email) || "student@edulearn.com";
-  const name = localStorage.getItem(AUTH_KEYS.name) || "Student";
-
-  return { name, email };
+  return {
+    id: localStorage.getItem(AUTH_KEYS.userId) || "",
+    name: localStorage.getItem(AUTH_KEYS.name) || "Student",
+    email: localStorage.getItem(AUTH_KEYS.email) || "",
+    role: localStorage.getItem(AUTH_KEYS.role) || "student",
+    token: localStorage.getItem(AUTH_KEYS.token) || "",
+  };
 }
 
 export function setAuthUser(user) {
   localStorage.setItem(AUTH_KEYS.loggedIn, "true");
-  localStorage.setItem(AUTH_KEYS.name, user.name);
-  localStorage.setItem(AUTH_KEYS.email, user.email);
+  localStorage.setItem(AUTH_KEYS.userId, String(user.id || ""));
+  localStorage.setItem(AUTH_KEYS.name, user.name || "");
+  localStorage.setItem(AUTH_KEYS.email, user.email || "");
+  localStorage.setItem(AUTH_KEYS.role, user.role || "student");
+  localStorage.setItem(AUTH_KEYS.token, user.token || "");
+}
+
+export function getAuthToken() {
+  return localStorage.getItem(AUTH_KEYS.token) || "";
 }
 
 export function clearAuthUser() {
   localStorage.removeItem(AUTH_KEYS.loggedIn);
+  localStorage.removeItem(AUTH_KEYS.token);
+  localStorage.removeItem(AUTH_KEYS.userId);
   localStorage.removeItem(AUTH_KEYS.name);
   localStorage.removeItem(AUTH_KEYS.email);
+  localStorage.removeItem(AUTH_KEYS.role);
 }
 
 export function getEnrolledCourses() {

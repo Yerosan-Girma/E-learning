@@ -1,69 +1,82 @@
-﻿import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
+import { api } from "../services/api";
 import { clearAuthUser, getAuthUser, setAuthUser } from "../utils/storage";
 
 const AuthContext = createContext(null);
 
+function roleToDashboardPath(role) {
+  if (role === "admin") return "/dashboard/admin";
+  if (role === "teacher") return "/dashboard/teacher";
+  return "/dashboard/student";
+}
+
 export function AuthProvider({ children, notify }) {
   const [user, setUser] = useState(() => getAuthUser());
-  const [activeModal, setActiveModal] = useState(null);
 
-  const openLoginModal = () => setActiveModal("login");
-  const openSignupModal = () => setActiveModal("signup");
-  const closeModal = () => setActiveModal(null);
-
-  const login = ({ email, password }) => {
+  const login = async ({ email, password }) => {
     if (!email || !password) {
       notify?.("Please provide email and password.", "danger");
-      return false;
+      return { success: false };
     }
 
-    const name = email.split("@")[0].replace(/[._-]/g, " ");
-    const normalizedName = name
-      .split(" ")
-      .filter(Boolean)
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ");
+    const { user: apiUser, token } = await api.login({ email, password });
 
     const nextUser = {
-      name: normalizedName || "Student",
-      email,
+      id: apiUser.id,
+      name: apiUser.full_name,
+      email: apiUser.email,
+      role: apiUser.role,
+      token,
     };
 
     setAuthUser(nextUser);
     setUser(nextUser);
     notify?.("Login successful.", "success");
-    closeModal();
 
-    return true;
+    return {
+      success: true,
+      user: nextUser,
+      redirectTo: roleToDashboardPath(nextUser.role),
+    };
   };
 
-  const signup = ({ firstName, lastName, email, password, confirmPassword, agreeTerms }) => {
-    if (!firstName || !lastName || !email || !password) {
+  const signup = async ({ fullName, firstName, lastName, email, password, confirmPassword, role }) => {
+    const resolvedName = fullName || `${firstName || ""} ${lastName || ""}`.trim();
+
+    if (!resolvedName || !email || !password) {
       notify?.("Please fill all required fields.", "danger");
-      return false;
+      return { success: false };
     }
 
     if (password !== confirmPassword) {
       notify?.("Passwords do not match.", "danger");
-      return false;
+      return { success: false };
     }
 
-    if (!agreeTerms) {
-      notify?.("Please agree to terms and conditions.", "danger");
-      return false;
-    }
+    const { user: apiUser, token } = await api.register({
+      fullName: resolvedName,
+      email,
+      password,
+      role: role || "student",
+    });
 
     const nextUser = {
-      name: `${firstName.trim()} ${lastName.trim()}`,
-      email: email.trim(),
+      id: apiUser.id,
+      name: apiUser.full_name,
+      email: apiUser.email,
+      role: apiUser.role,
+      token,
     };
 
     setAuthUser(nextUser);
     setUser(nextUser);
     notify?.("Account created successfully.", "success");
-    closeModal();
 
-    return true;
+    return {
+      success: true,
+      user: nextUser,
+      redirectTo: roleToDashboardPath(nextUser.role),
+    };
   };
 
   const logout = () => {
@@ -75,17 +88,15 @@ export function AuthProvider({ children, notify }) {
   const value = useMemo(
     () => ({
       user,
-      isLoggedIn: Boolean(user),
-      activeModal,
-      openLoginModal,
-      openSignupModal,
-      closeModal,
+      isLoggedIn: Boolean(user?.token),
+      role: user?.role || "guest",
       login,
       signup,
       logout,
       notify,
+      dashboardPath: roleToDashboardPath(user?.role),
     }),
-    [activeModal, notify, user]
+    [notify, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -98,4 +109,8 @@ export function useAuth() {
   }
 
   return context;
+}
+
+export function getDashboardPathByRole(role) {
+  return roleToDashboardPath(role);
 }

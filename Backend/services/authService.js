@@ -1,0 +1,54 @@
+const bcrypt = require("bcryptjs");
+const ApiError = require("../utils/ApiError");
+const { signToken } = require("../utils/jwt");
+const userModel = require("../models/userModel");
+
+async function registerUser({ fullName, email, password, role = "student" }) {
+  const existing = await userModel.findByEmail(email);
+  if (existing) {
+    throw new ApiError(409, "Email already exists");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const userId = await userModel.createUser({ fullName, email, passwordHash, role });
+
+  const user = await userModel.findById(userId);
+  const token = signToken({ id: user.id, role: user.role, email: user.email });
+
+  return { user, token };
+}
+
+async function loginUser({ email, password }) {
+  const user = await userModel.findByEmail(email);
+
+  if (!user) {
+    throw new ApiError(401, "Invalid credentials");
+  }
+
+  if (user.status !== "active") {
+    throw new ApiError(403, "Account is inactive");
+  }
+
+  const isValidPassword = await bcrypt.compare(password, user.password_hash);
+  if (!isValidPassword) {
+    throw new ApiError(401, "Invalid credentials");
+  }
+
+  const safeUser = {
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    created_at: user.created_at,
+  };
+
+  const token = signToken({ id: user.id, role: user.role, email: user.email });
+
+  return { user: safeUser, token };
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+};

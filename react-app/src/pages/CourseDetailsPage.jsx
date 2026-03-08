@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import CourseCard from "../components/common/CourseCard";
 import { useAuth } from "../context/AuthContext";
 import { COURSES, COURSES_BY_ID, getCurriculumByCourseId } from "../data/courses";
+import { api } from "../services/api";
 import { formatNumber, formatPrice, starsFromRating } from "../utils/format";
 import {
   addPaymentRecord,
@@ -50,11 +51,10 @@ function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
                     }
                   >
                     <option value="">Select Payment Method</option>
-                    <option value="bank">Bank Transfer</option>
-                    <option value="cbe">CBE Birr</option>
-                    <option value="telebirr">Telebirr</option>
-                    <option value="mbirr">M-Birr</option>
-                    <option value="other">Other</option>
+                    <option value="stripe">Stripe</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="manual">Manual Proof Upload</option>
+                    <option value="mock">Mock Gateway (Testing)</option>
                   </select>
                 </div>
 
@@ -83,7 +83,7 @@ function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
                     type="file"
                     className="form-control"
                     accept="image/*"
-                    required
+                    required={form.method === "manual"}
                     onChange={(event) => {
                       const file = event.target.files?.[0];
                       setForm((prev) => ({ ...prev, screenshot: file || null }));
@@ -120,7 +120,7 @@ function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn, openLoginModal, user, notify } = useAuth();
+  const { isLoggedIn, role, user, notify } = useAuth();
 
   const courseId = Number(id);
   const course = COURSES_BY_ID[courseId];
@@ -173,7 +173,12 @@ export default function CourseDetailsPage() {
   const handleEnrollClick = () => {
     if (!isLoggedIn) {
       notify("Please log in before enrolling.", "warning");
-      openLoginModal();
+      navigate("/login");
+      return;
+    }
+
+    if (role !== "student") {
+      notify("Only student accounts can enroll in courses.", "warning");
       return;
     }
 
@@ -183,25 +188,30 @@ export default function CourseDetailsPage() {
     }
 
     if (course.isFree || effectivePrice === 0) {
-      const record = {
-        id: course.id,
-        title: course.title,
-        status: "approved",
-        enrollmentDate: new Date().toISOString(),
-        progress: 0,
-        lastAccessed: new Date().toISOString(),
-      };
-      upsertEnrollment(record);
-      setEnrollment(record);
-      notify("Free course enrolled successfully.", "success");
-      navigate(`/learning/${course.id}`);
+      api
+        .enrollCourse(course.id)
+        .then((data) => {
+          const record = data.enrollment || {
+            id: course.id,
+            title: course.title,
+            status: "approved",
+            enrollmentDate: new Date().toISOString(),
+            progress: 0,
+            lastAccessed: new Date().toISOString(),
+          };
+          upsertEnrollment(record);
+          setEnrollment(record);
+          notify("Free course enrolled successfully.", "success");
+          navigate(`/learning/${course.id}`);
+        })
+        .catch((error) => notify(error.message || "Failed to enroll", "danger"));
       return;
     }
 
     setShowPaymentModal(true);
   };
 
-  const handlePaymentSubmit = (event) => {
+  const handlePaymentSubmit = async (event) => {
     event.preventDefault();
 
     if (!paymentForm.method) {
@@ -209,43 +219,68 @@ export default function CourseDetailsPage() {
       return;
     }
 
-    if (!paymentForm.screenshot) {
+    if (paymentForm.method === "manual" && !paymentForm.screenshot) {
       notify("Please upload payment screenshot.", "danger");
       return;
     }
 
-    const paymentRecord = {
-      id: Date.now(),
-      courseId: course.id,
-      courseTitle: course.title,
-      amount: effectivePrice,
-      method: paymentForm.method,
-      transactionId: paymentForm.transactionId,
-      screenshot: paymentForm.screenshot.name,
-      notes: paymentForm.notes,
-      status: "pending",
-      date: new Date().toISOString(),
-      userEmail: user?.email || "",
-      userName: user?.name || "",
-    };
+    try {
+      let status = "pending";
+      let transactionId = paymentForm.transactionId || "";
 
-    addPaymentRecord(paymentRecord);
+      if (paymentForm.method === "manual") {
+        const data = await api.submitManualProof(course.id, {
+          screenshot: paymentForm.screenshot,
+          transactionId: paymentForm.transactionId,
+          notes: paymentForm.notes,
+        });
+        transactionId = data.paymentId || transactionId;
+        status = "pending";
+      } else {
+        const data = await api.initializePayment(course.id, paymentForm.method || "mock");
+        transactionId = data.transactionId || transactionId;
+        status = data.status === "completed" ? "approved" : "pending";
+      }
 
-    const enrollmentRecord = {
-      id: course.id,
-      title: course.title,
-      status: "pending",
-      enrollmentDate: new Date().toISOString(),
-      progress: 0,
-      lastAccessed: null,
-    };
+      const paymentRecord = {
+        id: Date.now(),
+        courseId: course.id,
+        courseTitle: course.title,
+        amount: effectivePrice,
+        method: paymentForm.method,
+        transactionId,
+        screenshot: paymentForm.screenshot?.name || "",
+        notes: paymentForm.notes,
+        status,
+        date: new Date().toISOString(),
+        userEmail: user?.email || "",
+        userName: user?.name || "",
+      };
+      addPaymentRecord(paymentRecord);
 
-    upsertEnrollment(enrollmentRecord);
-    setEnrollment(enrollmentRecord);
+      const enrollmentRecord = {
+        id: course.id,
+        title: course.title,
+        status,
+        enrollmentDate: new Date().toISOString(),
+        progress: 0,
+        lastAccessed: null,
+      };
 
-    setPaymentForm({ method: "", transactionId: "", screenshot: null, notes: "" });
-    setShowPaymentModal(false);
-    notify("Payment submitted. Your enrollment is pending approval.", "success");
+      upsertEnrollment(enrollmentRecord);
+      setEnrollment(enrollmentRecord);
+
+      setPaymentForm({ method: "", transactionId: "", screenshot: null, notes: "" });
+      setShowPaymentModal(false);
+      notify(
+        status === "approved"
+          ? "Payment completed. You can start learning now."
+          : "Payment submitted. Your enrollment is pending approval.",
+        "success"
+      );
+    } catch (error) {
+      notify(error.message || "Payment submission failed.", "danger");
+    }
   };
 
   return (
