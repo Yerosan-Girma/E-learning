@@ -16,8 +16,29 @@ async function testConnection() {
   const connection = await pool.getConnection();
   try {
     await connection.ping();
+    await ensureSchema(connection);
   } finally {
     connection.release();
+  }
+}
+
+async function ensureSchema(connection) {
+  try {
+    await connection.execute(
+      "UPDATE payments SET gateway = 'manual' WHERE gateway NOT IN ('telebirr', 'manual')"
+    );
+
+    await connection.execute(
+      `
+        ALTER TABLE payments
+        MODIFY COLUMN gateway ENUM('telebirr', 'manual')
+        NOT NULL DEFAULT 'telebirr'
+      `
+    );
+  } catch (error) {
+    if (error.code !== "ER_NO_SUCH_TABLE") {
+      throw error;
+    }
   }
 }
 

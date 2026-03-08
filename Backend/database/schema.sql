@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS payments (
   user_id INT NOT NULL,
   course_id INT NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
-  gateway ENUM('stripe', 'paypal', 'manual', 'mock') NOT NULL DEFAULT 'mock',
+  gateway ENUM('telebirr', 'manual') NOT NULL DEFAULT 'telebirr',
   transaction_id VARCHAR(120) DEFAULT NULL,
   status ENUM('initiated', 'pending', 'completed', 'failed') NOT NULL DEFAULT 'initiated',
   screenshot_path VARCHAR(500) DEFAULT NULL,

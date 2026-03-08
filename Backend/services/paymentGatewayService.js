@@ -1,31 +1,26 @@
 const crypto = require("crypto");
 
 function normalizeGateway(gateway) {
-  if (!["stripe", "paypal", "manual", "mock"].includes(gateway)) {
-    return "mock";
+  if (!["telebirr", "manual"].includes(gateway)) {
+    return "manual";
   }
 
   return gateway;
 }
 
 async function initializePayment({ gateway, amount, courseId, userId }) {
-  const selectedGateway = normalizeGateway(gateway || process.env.PAYMENT_GATEWAY_MODE || "mock");
+  const selectedGateway = normalizeGateway(
+    gateway || process.env.PAYMENT_GATEWAY_MODE || "telebirr"
+  );
 
-  if (selectedGateway === "stripe") {
+  if (selectedGateway === "telebirr") {
     return {
-      gateway: "stripe",
-      transactionId: `stripe_${crypto.randomUUID()}`,
+      gateway: "telebirr",
+      transactionId: `telebirr_${crypto.randomUUID()}`,
       status: "pending",
-      checkoutUrl: `https://checkout.stripe.com/pay/${courseId}_${userId}`,
-    };
-  }
-
-  if (selectedGateway === "paypal") {
-    return {
-      gateway: "paypal",
-      transactionId: `paypal_${crypto.randomUUID()}`,
-      status: "pending",
-      checkoutUrl: `https://www.paypal.com/checkoutnow?token=${crypto.randomUUID()}`,
+      checkoutUrl: process.env.TELEBIRR_CHECKOUT_URL || null,
+      instructions:
+        "Complete your Telebirr payment and submit your transaction reference for admin verification.",
     };
   }
 
@@ -40,11 +35,11 @@ async function initializePayment({ gateway, amount, courseId, userId }) {
   }
 
   return {
-    gateway: "mock",
-    transactionId: `mock_${crypto.randomUUID()}`,
-    status: "completed",
+    gateway: "manual",
+    transactionId: `manual_${crypto.randomUUID()}`,
+    status: "pending",
     checkoutUrl: null,
-    instructions: "Mock gateway marks payment as completed instantly.",
+    instructions: "Upload payment screenshot and transaction reference for admin verification.",
   };
 }
 

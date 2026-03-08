@@ -11,6 +11,11 @@ import {
   upsertEnrollment,
 } from "../utils/storage";
 
+function isBackendCourseMissing(error) {
+  if (!error) return false;
+  return error.status === 404 && /course not found/i.test(String(error.message || ""));
+}
+
 function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
   if (!show) return null;
 
@@ -51,10 +56,8 @@ function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
                     }
                   >
                     <option value="">Select Payment Method</option>
-                    <option value="stripe">Stripe</option>
-                    <option value="paypal">PayPal</option>
+                    <option value="telebirr">Telebirr</option>
                     <option value="manual">Manual Proof Upload</option>
-                    <option value="mock">Mock Gateway (Testing)</option>
                   </select>
                 </div>
 
@@ -170,6 +173,53 @@ export default function CourseDetailsPage() {
   const isApproved = enrollment?.status === "approved";
   const isPending = enrollment?.status === "pending";
 
+  const saveEnrollmentAndNotify = ({
+    status,
+    paymentMethod = "",
+    transactionId = "",
+    notes = "",
+    screenshotName = "",
+    notificationMessage,
+    notificationType = "success",
+  }) => {
+    if (paymentMethod) {
+      const paymentRecord = {
+        id: Date.now(),
+        courseId: course.id,
+        courseTitle: course.title,
+        amount: effectivePrice,
+        method: paymentMethod,
+        transactionId,
+        screenshot: screenshotName,
+        notes,
+        status,
+        date: new Date().toISOString(),
+        userEmail: user?.email || "",
+        userName: user?.name || "",
+      };
+      addPaymentRecord(paymentRecord);
+    }
+
+    const enrollmentRecord = {
+      id: course.id,
+      title: course.title,
+      status,
+      enrollmentDate: new Date().toISOString(),
+      progress: 0,
+      lastAccessed: status === "approved" ? new Date().toISOString() : null,
+    };
+
+    upsertEnrollment(enrollmentRecord);
+    setEnrollment(enrollmentRecord);
+
+    if (paymentMethod) {
+      setPaymentForm({ method: "", transactionId: "", screenshot: null, notes: "" });
+      setShowPaymentModal(false);
+    }
+
+    notify(notificationMessage, notificationType);
+  };
+
   const handleEnrollClick = () => {
     if (!isLoggedIn) {
       notify("Please log in before enrolling.", "warning");
@@ -204,7 +254,20 @@ export default function CourseDetailsPage() {
           notify("Free course enrolled successfully.", "success");
           navigate(`/learning/${course.id}`);
         })
-        .catch((error) => notify(error.message || "Failed to enroll", "danger"));
+        .catch((error) => {
+          if (isBackendCourseMissing(error)) {
+            saveEnrollmentAndNotify({
+              status: "approved",
+              notificationMessage:
+                "Course not present in backend yet. Enrolled locally in frontend.",
+              notificationType: "warning",
+            });
+            navigate(`/learning/${course.id}`);
+            return;
+          }
+
+          notify(error.message || "Failed to enroll", "danger");
+        });
       return;
     }
 
@@ -234,51 +297,47 @@ export default function CourseDetailsPage() {
           transactionId: paymentForm.transactionId,
           notes: paymentForm.notes,
         });
-        transactionId = data.paymentId || transactionId;
+        transactionId = String(data.paymentId || transactionId || "");
         status = "pending";
       } else {
-        const data = await api.initializePayment(course.id, paymentForm.method || "mock");
-        transactionId = data.transactionId || transactionId;
+        const data = await api.initializePayment(course.id, paymentForm.method || "telebirr");
+        transactionId = String(data.transactionId || transactionId || "");
         status = data.status === "completed" ? "approved" : "pending";
       }
 
-      const paymentRecord = {
-        id: Date.now(),
-        courseId: course.id,
-        courseTitle: course.title,
-        amount: effectivePrice,
-        method: paymentForm.method,
+      saveEnrollmentAndNotify({
+        status,
+        paymentMethod: paymentForm.method,
         transactionId,
-        screenshot: paymentForm.screenshot?.name || "",
         notes: paymentForm.notes,
-        status,
-        date: new Date().toISOString(),
-        userEmail: user?.email || "",
-        userName: user?.name || "",
-      };
-      addPaymentRecord(paymentRecord);
-
-      const enrollmentRecord = {
-        id: course.id,
-        title: course.title,
-        status,
-        enrollmentDate: new Date().toISOString(),
-        progress: 0,
-        lastAccessed: null,
-      };
-
-      upsertEnrollment(enrollmentRecord);
-      setEnrollment(enrollmentRecord);
-
-      setPaymentForm({ method: "", transactionId: "", screenshot: null, notes: "" });
-      setShowPaymentModal(false);
-      notify(
-        status === "approved"
-          ? "Payment completed. You can start learning now."
-          : "Payment submitted. Your enrollment is pending approval.",
-        "success"
-      );
+        screenshotName: paymentForm.screenshot?.name || "",
+        notificationMessage:
+          status === "approved"
+            ? "Payment completed. You can start learning now."
+            : "Payment submitted. Your enrollment is pending approval.",
+        notificationType: "success",
+      });
     } catch (error) {
+      if (isBackendCourseMissing(error)) {
+        const fallbackStatus = "pending";
+        const fallbackTx =
+          String(paymentForm.transactionId || "").trim() || `LOCAL-${Date.now()}`;
+
+        saveEnrollmentAndNotify({
+          status: fallbackStatus,
+          paymentMethod: paymentForm.method,
+          transactionId: fallbackTx,
+          notes: paymentForm.notes,
+          screenshotName: paymentForm.screenshot?.name || "",
+          notificationMessage:
+            fallbackStatus === "approved"
+              ? "Course not present in backend yet. Payment saved locally and enrollment approved."
+              : "Course not present in backend yet. Payment saved locally and enrollment is pending.",
+          notificationType: "warning",
+        });
+        return;
+      }
+
       notify(error.message || "Payment submission failed.", "danger");
     }
   };

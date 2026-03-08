@@ -4,7 +4,7 @@ const baseCourses = [
   {
     id: 1,
     title: "Web Development Bootcamp 2024",
-    instructor: "Sarah Johnson",
+    instructor: "Yerosan Girma",
     rating: 4.8,
     reviews: 1247,
     durationHours: 42,
@@ -13,7 +13,7 @@ const baseCourses = [
     price: 89.99,
     discountPrice: 64.99,
     image:
-      "https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+      "c:/Users/pc/OneDrive/Desktop/PC/Distande education/frontend/react-app/public/images/yerosan.jpg",
     category: "Web Development",
     isFeatured: true,
     isFree: false,
@@ -93,12 +93,13 @@ const baseCourses = [
     price: 0,
     discountPrice: 0,
     image:
-      "https://images.unsplash.com/photo-1526379879527-8559ecfcaec5?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80",
+      "frontend/react-app/public/images/pythonimage.avif",
     category: "Programming",
     isFeatured: false,
     isFree: true,
     students: 12500,
     shortDescription:
+
       "Start coding with Python syntax, control flow, functions, files, and practical beginner projects.",
   },
   {
