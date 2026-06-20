@@ -25,9 +25,9 @@ const register = asyncHandler(async (req, res) => {
 });
 
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, googleId } = req.body;
 
-  const data = await authService.loginUser({ email, password });
+  const data = await authService.loginUser({ email, password, googleId });
   return sendSuccess(res, data, "Login successful");
 });
 

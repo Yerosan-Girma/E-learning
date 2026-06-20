@@ -3,6 +3,8 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const morgan = require("morgan");
+const session = require("express-session");
+const passport = require("./config/passport");
 const { generalLimiter, authLimiter, paymentLimiter } = require("./middleware/rateLimitMiddleware");
 
 const authRoutes = require("./routes/authRoutes");
@@ -77,6 +79,22 @@ app.use(helmet({
 
 // Rate limiting
 app.use(generalLimiter);
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Passport initialization
+app.use(passport.initialize());
+app.use(passport.session());
 
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));

@@ -12,6 +12,8 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteFooter from "./components/layout/SiteFooter";
 import SiteNavbar from "./components/layout/SiteNavbar";
 import { useAuth } from "./context/AuthContext";
+import { setAuthUser } from "./utils/storage";
+import { api } from "./services/api";
 import PaymentPage from "./pages/PaymentPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
