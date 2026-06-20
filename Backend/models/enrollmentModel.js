@@ -1,47 +1,65 @@
 const { pool } = require("../config/db");
 
 async function findEnrollment({ userId, courseId }) {
-  const [rows] = await pool.execute(
+  const result = await pool.query(
     `
       SELECT *
       FROM enrollments
-      WHERE user_id = ? AND course_id = ?
+      WHERE user_id = $1 AND course_id = $2
       LIMIT 1
     `,
     [userId, courseId]
   );
 
-  return rows[0] || null;
+  return result.rows[0] || null;
 }
 
-async function createEnrollment({ userId, courseId, status }) {
-  const [result] = await pool.execute(
-    `
-      INSERT INTO enrollments (user_id, course_id, status)
-      VALUES (?, ?, ?)
-    `,
-    [userId, courseId, status]
-  );
-
-  return result.insertId;
+async function createEnrollment({ userId, courseId, status, enrollmentType }) {
+  // Try with enrollment_type column first (for enhanced schema)
+  try {
+    const result = await pool.query(
+      `
+        INSERT INTO enrollments (user_id, course_id, status, enrollment_type)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id
+      `,
+      [userId, courseId, status, enrollmentType || 'purchase']
+    );
+    return result.rows[0].id;
+  } catch (error) {
+    // If column doesn't exist, try without it (for original schema)
+    if (error.code === '42703') { // column does not exist
+      const result = await pool.query(
+        `
+          INSERT INTO enrollments (user_id, course_id, status)
+          VALUES ($1, $2, $3)
+          RETURNING id
+        `,
+        [userId, courseId, status]
+      );
+      return result.rows[0].id;
+    }
+    throw error;
+  }
 }
 
 async function updateEnrollment({ enrollmentId, status, progress, lastAccessed }) {
   const fields = [];
   const values = [];
+  let paramIndex = 1;
 
   if (typeof status !== "undefined") {
-    fields.push("status = ?");
+    fields.push(`status = $${paramIndex++}`);
     values.push(status);
   }
 
   if (typeof progress !== "undefined") {
-    fields.push("progress = ?");
+    fields.push(`progress = $${paramIndex++}`);
     values.push(progress);
   }
 
   if (typeof lastAccessed !== "undefined") {
-    fields.push("last_accessed = ?");
+    fields.push(`last_accessed = $${paramIndex++}`);
     values.push(lastAccessed);
   }
 
@@ -49,16 +67,16 @@ async function updateEnrollment({ enrollmentId, status, progress, lastAccessed }
 
   values.push(enrollmentId);
 
-  const [result] = await pool.execute(
-    `UPDATE enrollments SET ${fields.join(", ")} WHERE id = ?`,
+  const result = await pool.query(
+    `UPDATE enrollments SET ${fields.join(", ")} WHERE id = $${paramIndex}`,
     values
   );
 
-  return result.affectedRows;
+  return result.rowCount;
 }
 
 async function listEnrollmentsByUser(userId) {
-  const [rows] = await pool.execute(
+  const result = await pool.query(
     `
       SELECT
         e.*,
@@ -72,13 +90,13 @@ async function listEnrollmentsByUser(userId) {
       FROM enrollments e
       INNER JOIN courses c ON e.course_id = c.id
       INNER JOIN users u ON c.instructor_id = u.id
-      WHERE e.user_id = ?
+      WHERE e.user_id = $1
       ORDER BY e.enrollment_date DESC
     `,
     [userId]
   );
 
-  return rows;
+  return result.rows;
 }
 
 async function listAllEnrollments({ status } = {}) {
@@ -97,20 +115,21 @@ async function listAllEnrollments({ status } = {}) {
   `;
 
   const values = [];
+  let paramIndex = 1;
 
   if (status) {
-    query += " WHERE e.status = ?";
+    query += ` WHERE e.status = $${paramIndex++}`;
     values.push(status);
   }
 
   query += " ORDER BY e.enrollment_date DESC";
 
-  const [rows] = await pool.execute(query, values);
-  return rows;
+  const result = await pool.query(query, values);
+  return result.rows;
 }
 
 async function countEnrollmentSummary() {
-  const [rows] = await pool.execute(
+  const result = await pool.query(
     `
       SELECT status, COUNT(*) AS total
       FROM enrollments
@@ -118,7 +137,7 @@ async function countEnrollmentSummary() {
     `
   );
 
-  return rows;
+  return result.rows;
 }
 
 module.exports = {

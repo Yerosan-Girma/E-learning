@@ -1,226 +1,55 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import CourseCard from "../components/common/CourseCard";
 import { useAuth } from "../context/AuthContext";
-import { COURSES, COURSES_BY_ID, getCurriculumByCourseId } from "../data/courses";
 import { api } from "../services/api";
-import { formatNumber, formatPrice, starsFromRating } from "../utils/format";
-import {
-  addPaymentRecord,
-  getCourseEnrollment,
-  upsertEnrollment,
-} from "../utils/storage";
-
-function isBackendCourseMissing(error) {
-  if (!error) return false;
-  return error.status === 404 && /course not found/i.test(String(error.message || ""));
-}
-
-function PaymentModal({ show, onClose, onSubmit, form, setForm, course }) {
-  if (!show) return null;
-
-  return (
-    <>
-      <div className="modal fade show d-block" tabIndex={-1} role="dialog" aria-modal="true">
-        <div className="modal-dialog modal-lg">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h5 className="modal-title">Complete Enrollment</h5>
-              <button type="button" className="btn-close" onClick={onClose} aria-label="Close" />
-            </div>
-            <div className="modal-body">
-              <div className="alert alert-info">
-                <h6>
-                  <i className="fas fa-info-circle me-2" /> Payment Instructions
-                </h6>
-                <p className="mb-2">
-                  Submit payment details and screenshot for admin verification.
-                </p>
-                <p className="mb-0">
-                  Course: <strong>{course.title}</strong> | Amount: <strong>{formatPrice(course.discountPrice || course.price)}</strong>
-                </p>
-              </div>
-
-              <form onSubmit={onSubmit}>
-                <div className="mb-3">
-                  <label htmlFor="paymentMethod" className="form-label">
-                    Payment Method
-                  </label>
-                  <select
-                    id="paymentMethod"
-                    className="form-select"
-                    required
-                    value={form.method}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, method: event.target.value }))
-                    }
-                  >
-                    <option value="">Select Payment Method</option>
-                    <option value="telebirr">Telebirr</option>
-                    <option value="manual">Manual Proof Upload</option>
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="transactionId" className="form-label">
-                    Transaction ID
-                  </label>
-                  <input
-                    id="transactionId"
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter transaction reference number"
-                    value={form.transactionId}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, transactionId: event.target.value }))
-                    }
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="paymentScreenshot" className="form-label">
-                    Upload Payment Screenshot *
-                  </label>
-                  <input
-                    id="paymentScreenshot"
-                    type="file"
-                    className="form-control"
-                    accept="image/*"
-                    required={form.method === "manual"}
-                    onChange={(event) => {
-                      const file = event.target.files?.[0];
-                      setForm((prev) => ({ ...prev, screenshot: file || null }));
-                    }}
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label htmlFor="paymentNotes" className="form-label">
-                    Additional Notes (Optional)
-                  </label>
-                  <textarea
-                    id="paymentNotes"
-                    className="form-control"
-                    rows="2"
-                    value={form.notes}
-                    onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary w-100">
-                  <i className="fas fa-paper-plane me-2" /> Submit for Approval
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="modal-backdrop fade show" onClick={onClose} />
-    </>
-  );
-}
+import { normalizeCourse } from "../utils/courseAdapter";
+import { formatNumber, formatPrice } from "../utils/format";
 
 export default function CourseDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn, role, user, notify } = useAuth();
+  const { isLoggedIn, role, notify, refreshStudentState } = useAuth();
 
-  const courseId = Number(id);
-  const course = COURSES_BY_ID[courseId];
+  const [loading, setLoading] = useState(true);
+  const [course, setCourse] = useState(null);
+  const [access, setAccess] = useState(null);
+  const [lessons, setLessons] = useState([]);
+  const [quizzes, setQuizzes] = useState([]);
 
-  const [activeTab, setActiveTab] = useState("overview");
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentForm, setPaymentForm] = useState({
-    method: "",
-    transactionId: "",
-    screenshot: null,
-    notes: "",
-  });
-  const [enrollment, setEnrollment] = useState(() => getCourseEnrollment(courseId));
+  const dashboardPath = `/courses/${id}/dashboard`;
 
-  useEffect(() => {
-    setEnrollment(getCourseEnrollment(courseId));
-  }, [courseId]);
-
-  const curriculum = useMemo(() => getCurriculumByCourseId(courseId), [courseId]);
-
-  const relatedCourses = useMemo(() => {
-    if (!course) return [];
-
-    return COURSES.filter(
-      (item) => item.id !== course.id && (item.category === course.category || item.isFeatured)
-    ).slice(0, 3);
-  }, [course]);
-
-  if (!course) {
-    return (
-      <div className="container py-5 mt-5">
-        <div className="alert alert-warning">Course not found.</div>
-        <Link to="/courses" className="btn btn-primary">
-          Back to Courses
-        </Link>
-      </div>
-    );
+  async function loadCourse() {
+    setLoading(true);
+    try {
+      const data = await api.getCourse(id);
+      setCourse(normalizeCourse(data.course));
+      setAccess(data.access || null);
+      setLessons(data.lessons || []);
+      setQuizzes(data.quizzes || []);
+    } catch (error) {
+      notify(error.message || "Failed to load course", "danger");
+      setCourse(null);
+      setAccess(null);
+      setLessons([]);
+      setQuizzes([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const effectivePrice = course.discountPrice || course.price;
-  const discount =
-    course.price > 0 && course.discountPrice > 0
-      ? Math.round(((course.price - course.discountPrice) / course.price) * 100)
-      : 0;
-  const stars = starsFromRating(course.rating);
+  useEffect(() => {
+    loadCourse();
+  }, [id]);
 
-  const isApproved = enrollment?.status === "approved";
-  const isPending = enrollment?.status === "pending";
+  const accessLabel = useMemo(() => {
+    if (!access) return "Sign in to enroll";
+    if (access.hasAccess) return "Access active";
+    if (access.enrollment?.status === "pending") return "Enrollment pending";
+    if (course?.isFree) return "Free course";
+    return "Paid course";
+  }, [access, course]);
 
-  const saveEnrollmentAndNotify = ({
-    status,
-    paymentMethod = "",
-    transactionId = "",
-    notes = "",
-    screenshotName = "",
-    notificationMessage,
-    notificationType = "success",
-  }) => {
-    if (paymentMethod) {
-      const paymentRecord = {
-        id: Date.now(),
-        courseId: course.id,
-        courseTitle: course.title,
-        amount: effectivePrice,
-        method: paymentMethod,
-        transactionId,
-        screenshot: screenshotName,
-        notes,
-        status,
-        date: new Date().toISOString(),
-        userEmail: user?.email || "",
-        userName: user?.name || "",
-      };
-      addPaymentRecord(paymentRecord);
-    }
-
-    const enrollmentRecord = {
-      id: course.id,
-      title: course.title,
-      status,
-      enrollmentDate: new Date().toISOString(),
-      progress: 0,
-      lastAccessed: status === "approved" ? new Date().toISOString() : null,
-    };
-
-    upsertEnrollment(enrollmentRecord);
-    setEnrollment(enrollmentRecord);
-
-    if (paymentMethod) {
-      setPaymentForm({ method: "", transactionId: "", screenshot: null, notes: "" });
-      setShowPaymentModal(false);
-    }
-
-    notify(notificationMessage, notificationType);
-  };
-
-  const handleEnrollClick = () => {
+  const handleEnroll = async () => {
     if (!isLoggedIn) {
       notify("Please log in before enrolling.", "warning");
       navigate("/login");
@@ -232,115 +61,54 @@ export default function CourseDetailsPage() {
       return;
     }
 
-    if (isApproved) {
-      navigate(`/learning/${course.id}`);
+    if (access?.hasAccess) {
+      navigate(dashboardPath);
       return;
     }
 
-    if (course.isFree || effectivePrice === 0) {
-      api
-        .enrollCourse(course.id)
-        .then((data) => {
-          const record = data.enrollment || {
-            id: course.id,
-            title: course.title,
-            status: "approved",
-            enrollmentDate: new Date().toISOString(),
-            progress: 0,
-            lastAccessed: new Date().toISOString(),
-          };
-          upsertEnrollment(record);
-          setEnrollment(record);
-          notify("Free course enrolled successfully.", "success");
-          navigate(`/learning/${course.id}`);
-        })
-        .catch((error) => {
-          if (isBackendCourseMissing(error)) {
-            saveEnrollmentAndNotify({
-              status: "approved",
-              notificationMessage:
-                "Course not present in backend yet. Enrolled locally in frontend.",
-              notificationType: "warning",
-            });
-            navigate(`/learning/${course.id}`);
-            return;
-          }
-
-          notify(error.message || "Failed to enroll", "danger");
-        });
+    if (course?.isFree) {
+      try {
+        await api.enrollCourse(id);
+        await refreshStudentState();
+        notify("Enrolled successfully! Welcome to the course.", "success");
+        navigate(dashboardPath);
+      } catch (error) {
+        notify(error.message || "Could not enroll in free course", "danger");
+      }
       return;
     }
 
-    setShowPaymentModal(true);
+    navigate(`/payment/${id}`);
   };
 
-  const handlePaymentSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!paymentForm.method) {
-      notify("Please select payment method.", "danger");
-      return;
+  const moduleGroups = useMemo(() => {
+    const groups = {};
+    for (const lesson of lessons) {
+      const moduleName = lesson.module_name || "General";
+      if (!groups[moduleName]) groups[moduleName] = [];
+      groups[moduleName].push(lesson);
     }
+    return Object.entries(groups);
+  }, [lessons]);
 
-    if (paymentForm.method === "manual" && !paymentForm.screenshot) {
-      notify("Please upload payment screenshot.", "danger");
-      return;
-    }
+  if (loading) {
+    return (
+      <div className="container py-5 mt-5">
+        <div className="alert alert-info">Loading course details...</div>
+      </div>
+    );
+  }
 
-    try {
-      let status = "pending";
-      let transactionId = paymentForm.transactionId || "";
-
-      if (paymentForm.method === "manual") {
-        const data = await api.submitManualProof(course.id, {
-          screenshot: paymentForm.screenshot,
-          transactionId: paymentForm.transactionId,
-          notes: paymentForm.notes,
-        });
-        transactionId = String(data.paymentId || transactionId || "");
-        status = "pending";
-      } else {
-        const data = await api.initializePayment(course.id, paymentForm.method || "telebirr");
-        transactionId = String(data.transactionId || transactionId || "");
-        status = data.status === "completed" ? "approved" : "pending";
-      }
-
-      saveEnrollmentAndNotify({
-        status,
-        paymentMethod: paymentForm.method,
-        transactionId,
-        notes: paymentForm.notes,
-        screenshotName: paymentForm.screenshot?.name || "",
-        notificationMessage:
-          status === "approved"
-            ? "Payment completed. You can start learning now."
-            : "Payment submitted. Your enrollment is pending approval.",
-        notificationType: "success",
-      });
-    } catch (error) {
-      if (isBackendCourseMissing(error)) {
-        const fallbackStatus = "pending";
-        const fallbackTx =
-          String(paymentForm.transactionId || "").trim() || `LOCAL-${Date.now()}`;
-
-        saveEnrollmentAndNotify({
-          status: fallbackStatus,
-          paymentMethod: paymentForm.method,
-          transactionId: fallbackTx,
-          notes: paymentForm.notes,
-          screenshotName: paymentForm.screenshot?.name || "",
-          notificationMessage:
-            fallbackStatus === "approved"
-              ? "Course not present in backend yet. Payment saved locally and enrollment approved."
-              : "Course not present in backend yet. Payment saved locally and enrollment is pending.",
-          notificationType: "warning",
-        });
-        return;
-      }
-
-      notify(error.message || "Payment submission failed.", "danger");
-    }
-  };
+  if (!course) {
+    return (
+      <div className="container py-5 mt-5">
+        <div className="alert alert-warning">Course not found.</div>
+        <Link to="/courses" className="btn btn-primary">
+          Back to Courses
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -360,42 +128,57 @@ export default function CourseDetailsPage() {
             </ol>
           </nav>
 
-          <div className="row">
+          <div className="row align-items-center">
             <div className="col-lg-8">
+              <span className={`badge ${course.isFree ? "bg-success" : "bg-dark"} mb-3`}>
+                {course.isFree ? "FREE" : "PAID"}
+              </span>
               <h1 className="display-5 fw-bold mb-3">{course.title}</h1>
               <p className="lead mb-4">{course.shortDescription}</p>
 
-              <div className="d-flex align-items-center flex-wrap gap-3 mb-4">
-                <div className="d-flex align-items-center">
-                  <div className="course-rating me-2">
-                    {Array.from({ length: stars.full }).map((_, idx) => (
-                      <i key={`full-${idx}`} className="fas fa-star text-warning" />
-                    ))}
-                    {stars.hasHalf && <i className="fas fa-star-half-alt text-warning" />}
-                  </div>
-                  <span className="fw-bold me-2">{course.rating}</span>
-                  <span className="text-muted">({formatNumber(course.reviews)} reviews)</span>
-                </div>
-
-                <span className="text-muted">
-                  <i className="fas fa-user-graduate me-1" /> {formatNumber(course.students)} students
+              <div className="d-flex flex-wrap gap-3 text-muted mb-4">
+                <span>
+                  <i className="fas fa-user-tie me-2" /> {course.instructor}
                 </span>
-                <span className="badge bg-success">{course.level}</span>
-                <span className="text-muted">
-                  <i className="far fa-clock me-1" /> {course.durationHours} hours
+                <span>
+                  <i className="fas fa-layer-group me-2" /> {course.level}
+                </span>
+                <span>
+                  <i className="fas fa-play-circle me-2" /> {lessons.length} lessons
+                </span>
+                <span>
+                  <i className="fas fa-users me-2" /> {formatNumber(course.enrolledStudents)} enrolled
+                </span>
+                <span>
+                  <i className="fas fa-list-check me-2" /> {quizzes.length} quizzes
                 </span>
               </div>
+            </div>
 
-              <div className="instructor-card d-inline-flex align-items-center p-3 mb-4">
-                <img
-                  src="https://randomuser.me/api/portraits/women/32.jpg"
-                  alt="Instructor"
-                  className="rounded-circle me-3"
-                  width="60"
-                />
-                <div>
-                  <h6 className="fw-bold mb-1">Created by {course.instructor}</h6>
-                  <p className="text-muted small mb-0">Senior Instructor</p>
+            <div className="col-lg-4">
+              <div className="card enrollment-card shadow-sm">
+                <div className="card-body p-4">
+                  <div className="text-center mb-3">
+                    <h3 className={`fw-bold mb-1 ${course.isFree ? "text-success" : "text-primary"}`}>
+                      {course.isFree ? "Free" : formatPrice(course.effectivePrice)}
+                    </h3>
+                    <small className="text-muted">{accessLabel}</small>
+                  </div>
+
+                  <div className="d-grid gap-2">
+                    <button className="btn btn-primary btn-lg" type="button" onClick={handleEnroll}>
+                      {access?.hasAccess ? "Go to Course Dashboard" : "Enroll Now"}
+                    </button>
+                    <Link to="/courses" className="btn btn-outline-primary btn-lg">
+                      Browse More Courses
+                    </Link>
+                  </div>
+
+                  <div className="alert alert-light border mt-3 mb-0">
+                    {course.isFree
+                      ? "Free courses enroll instantly once you sign in."
+                      : "Paid courses require login and a simulated payment to unlock content."}
+                  </div>
                 </div>
               </div>
             </div>
@@ -404,230 +187,112 @@ export default function CourseDetailsPage() {
       </div>
 
       <div className="container py-5">
-        <div className="row">
-          <div className="col-lg-8 mb-5 mb-lg-0">
-            <ul className="nav nav-tabs mb-4" role="tablist">
-              {["overview", "curriculum", "instructor", "reviews"].map((tab) => (
-                <li className="nav-item" role="presentation" key={tab}>
-                  <button
-                    className={`nav-link ${activeTab === tab ? "active" : ""}`}
-                    onClick={() => setActiveTab(tab)}
-                    type="button"
-                  >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {activeTab === "overview" && (
-              <div>
-                <h4 className="fw-bold mb-4">What You Will Learn</h4>
-                <div className="row mb-5">
-                  <div className="col-md-6">
-                    <ul className="list-unstyled">
-                      {course.whatYouLearn.slice(0, 3).map((item) => (
-                        <li className="mb-3" key={item}>
-                          <i className="fas fa-check text-success me-2" /> {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="col-md-6">
-                    <ul className="list-unstyled">
-                      {course.whatYouLearn.slice(3).map((item) => (
-                        <li className="mb-3" key={item}>
-                          <i className="fas fa-check text-success me-2" /> {item}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                <h4 className="fw-bold mb-3">Description</h4>
-                <p>{course.fullDescription}</p>
-
-                <div className="mt-5">
-                  <h4 className="fw-bold mb-4">Course Requirements</h4>
-                  <ul className="list-unstyled">
-                    {course.requirements.map((item) => (
-                      <li className="mb-2" key={item}>
-                        <i className="fas fa-check-circle text-primary me-2" /> {item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+        <div className="row g-4">
+          <div className="col-lg-8">
+            <div className="card border-0 shadow-sm mb-4">
+              <div className="card-body">
+                <h4 className="fw-bold mb-3">Course Overview</h4>
+                <p className="mb-0">{course.description || course.shortDescription}</p>
               </div>
-            )}
+            </div>
 
-            {activeTab === "curriculum" && (
-              <div className="accordion curriculum-accordion">
-                {curriculum.map((module) => (
-                  <div className="accordion-item" key={module.id}>
-                    <div className="accordion-button">
-                      <div className="d-flex justify-content-between w-100 me-3">
-                        <span>{module.title}</span>
-                        <span className="text-muted">{module.duration}</span>
-                      </div>
-                    </div>
-                    <div className="accordion-body">
-                      {module.lessons.map((lesson) => (
-                        <div className="curriculum-item" key={lesson}>
-                          <span>
-                            <i className="far fa-play-circle me-2" /> {lesson}
-                          </span>
-                          <small className="text-muted">Preview</small>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {activeTab === "instructor" && (
-              <div className="row">
-                <div className="col-md-3 text-center mb-4">
-                  <img
-                    src="https://randomuser.me/api/portraits/women/32.jpg"
-                    alt="Instructor"
-                    className="rounded-circle mb-3"
-                    width="120"
-                  />
-                  <h5 className="fw-bold">{course.instructor}</h5>
-                  <p className="text-muted">Senior Instructor</p>
-                </div>
-                <div className="col-md-9">
-                  <h6 className="fw-bold">About the Instructor</h6>
-                  <p>{course.instructorBio}</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === "reviews" && (
-              <div>
-                {course.reviewsList.map((review) => (
-                  <div className="card border-0 shadow-sm mb-3" key={review.id}>
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between mb-2">
-                        <h6 className="fw-bold mb-0">{review.author}</h6>
-                        <small className="text-muted">{review.date}</small>
-                      </div>
-                      <div className="mb-2 text-warning">
-                        {Array.from({ length: review.rating }).map((_, idx) => (
-                          <i key={`r-${review.id}-${idx}`} className="fas fa-star" />
+            <div className="card border-0 shadow-sm mb-4">
+              <div className="card-body">
+                <h4 className="fw-bold mb-3">Course Modules & Lessons</h4>
+                {lessons.length === 0 ? (
+                  <p className="text-muted mb-0">Lessons will appear here when published.</p>
+                ) : (
+                  moduleGroups.map(([moduleName, moduleLessons]) => (
+                    <div className="mb-4" key={moduleName}>
+                      <h6 className="fw-bold text-primary mb-2">{moduleName}</h6>
+                      <div className="list-group list-group-flush">
+                        {moduleLessons.map((lesson, index) => (
+                          <div className="list-group-item px-0" key={lesson.id}>
+                            <div className="d-flex justify-content-between align-items-center">
+                              <div>
+                                <strong>
+                                  {index + 1}. {lesson.title}
+                                </strong>
+                                <div className="small text-muted text-uppercase">{lesson.lesson_type}</div>
+                              </div>
+                              {lesson.is_preview ? (
+                                <span className="badge bg-info">Preview</span>
+                              ) : (
+                                <span className="badge bg-secondary">Locked</span>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
-                      <p className="mb-0 text-muted">{review.comment}</p>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
-            )}
+            </div>
+
+            <div className="card border-0 shadow-sm">
+              <div className="card-body">
+                <h4 className="fw-bold mb-3">Assessments</h4>
+                {quizzes.length === 0 ? (
+                  <p className="text-muted mb-0">No quizzes have been added yet.</p>
+                ) : (
+                  quizzes.map((quiz) => (
+                    <div className="border rounded p-3 mb-3" key={quiz.id}>
+                      <h6 className="fw-bold mb-1">{quiz.title}</h6>
+                      <small className="text-muted">
+                        {quiz.question_count} questions · Passing score{" "}
+                        {Number(quiz.passing_score).toFixed(0)}%
+                      </small>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="col-lg-4">
-            <div className="sticky-sidebar">
-              <div className="card enrollment-card">
-                <div className="card-body p-4">
-                  <div className="text-center mb-4">
-                    <h3 className="text-primary fw-bold">{formatPrice(effectivePrice)}</h3>
-                    {course.price > 0 && course.discountPrice > 0 && (
-                      <>
-                        <s className="text-muted">{formatPrice(course.price)}</s>
-                        <span className="badge bg-danger ms-2">{discount}% OFF</span>
-                      </>
-                    )}
-                    <p className="text-muted small mt-2">30-Day Money-Back Guarantee</p>
-                  </div>
-
-                  <div className="d-grid gap-2 mb-3">
-                    <button
-                      className={`btn btn-lg ${isPending ? "btn-warning" : "btn-primary"}`}
-                      type="button"
-                      onClick={handleEnrollClick}
-                      disabled={isPending}
-                    >
-                      {isApproved ? (
-                        <>
-                          <i className="fas fa-play-circle me-2" /> Continue Learning
-                        </>
-                      ) : isPending ? (
-                        <>
-                          <i className="fas fa-clock me-2" /> Pending Approval
-                        </>
-                      ) : (
-                        <>
-                          <i className="fas fa-shopping-cart me-2" /> Enroll Now
-                        </>
-                      )}
-                    </button>
-
-                    <button className="btn btn-outline-primary btn-lg" type="button">
-                      <i className="far fa-heart me-2" /> Add to Wishlist
-                    </button>
-                  </div>
-
-                  <h6 className="fw-bold mb-3">This course includes:</h6>
-                  <ul className="list-unstyled">
-                    <li className="mb-2">
-                      <i className="fas fa-video text-primary me-2" /> {course.durationHours} hours on-demand video
-                    </li>
-                    <li className="mb-2">
-                      <i className="fas fa-file-alt text-primary me-2" /> 12 articles and resources
-                    </li>
-                    <li className="mb-2">
-                      <i className="fas fa-download text-primary me-2" /> 15 downloadable resources
-                    </li>
-                    <li className="mb-2">
-                      <i className="fas fa-infinity text-primary me-2" /> Full lifetime access
-                    </li>
-                    <li className="mb-2">
-                      <i className="fas fa-trophy text-primary me-2" /> Certificate of completion
-                    </li>
-                  </ul>
-                </div>
+            <div className="card border-0 shadow-sm mb-4">
+              <div className="card-body">
+                <h5 className="fw-bold mb-3">What You'll Get</h5>
+                <ul className="list-unstyled mb-0">
+                  <li className="mb-2">
+                    <i className="fas fa-check text-success me-2" /> Structured modules with video lessons
+                  </li>
+                  <li className="mb-2">
+                    <i className="fas fa-check text-success me-2" /> Downloadable PDF resources
+                  </li>
+                  <li className="mb-2">
+                    <i className="fas fa-check text-success me-2" /> Lesson notes and practice quizzes
+                  </li>
+                  <li className="mb-2">
+                    <i className="fas fa-check text-success me-2" /> Progress tracking dashboard
+                  </li>
+                  <li>
+                    <i className="fas fa-check text-success me-2" /> Completion status per lesson
+                  </li>
+                </ul>
               </div>
+            </div>
 
-              <div className="card mt-3 border-0 bg-light">
-                <div className="card-body">
-                  <h6 className="fw-bold mb-3">Your Progress</h6>
-                  <div className="progress mb-2" style={{ height: "8px" }}>
-                    <div className="progress-bar" role="progressbar" style={{ width: `${enrollment?.progress || 0}%` }} />
-                  </div>
-                  <small className="text-muted">
-                    {isApproved
-                      ? `${enrollment?.progress || 0}% completed`
-                      : isPending
-                      ? "Enrollment pending approval"
-                      : "Not enrolled yet"}
-                  </small>
-                </div>
+            <div className="card border-0 shadow-sm">
+              <div className="card-body">
+                <h5 className="fw-bold mb-3">Enrollment Rules</h5>
+                <ul className="list-unstyled mb-0 small">
+                  <li className="mb-2">
+                    <i className="fas fa-sign-in-alt text-primary me-2" /> Login required to enroll
+                  </li>
+                  <li className="mb-2">
+                    <i className="fas fa-gift text-success me-2" /> Free courses enroll instantly
+                  </li>
+                  <li>
+                    <i className="fas fa-credit-card text-primary me-2" /> Paid courses use simulated payment
+                  </li>
+                </ul>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <section className="py-5 bg-light">
-        <div className="container">
-          <h3 className="fw-bold mb-4">Students also bought</h3>
-          <div className="row">
-            {relatedCourses.map((related) => (
-              <CourseCard key={related.id} course={related} />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <PaymentModal
-        show={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onSubmit={handlePaymentSubmit}
-        form={paymentForm}
-        setForm={setPaymentForm}
-        course={course}
-      />
     </>
   );
 }

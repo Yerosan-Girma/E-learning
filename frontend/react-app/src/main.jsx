@@ -28,7 +28,7 @@ function Root() {
 
   return (
     <AuthProvider notify={providerValue}>
-      <App />
+      <App /> 
       <AlertStack alerts={alerts} onDismiss={removeAlert} />
     </AuthProvider>
   );

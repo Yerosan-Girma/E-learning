@@ -41,6 +41,7 @@ const listCourseLessons = asyncHandler(async (req, res) => {
   }
 
   let lessons = await lessonModel.listLessonsByCourseId(courseId);
+  let accessMode = "preview_only";
 
   const isOwner = req.user && (req.user.role === "admin" || Number(req.user.id) === Number(course.instructor_id));
 
@@ -50,6 +51,7 @@ const listCourseLessons = asyncHandler(async (req, res) => {
       : null;
 
     const hasApprovedEnrollment = Boolean(enrollment && enrollment.status === "approved");
+    accessMode = hasApprovedEnrollment ? "full_access" : "preview_only";
 
     if (!hasApprovedEnrollment) {
       lessons = lessons.filter((lesson) => lesson.is_preview);
@@ -67,9 +69,33 @@ const listCourseLessons = asyncHandler(async (req, res) => {
         attachment_url: null,
       };
     });
+  } else {
+    accessMode = "owner_access";
   }
 
-  return sendSuccess(res, { lessons }, "Lessons fetched");
+  if (req.user?.role === "student") {
+    const progressRows = await lessonModel.listLessonProgressByUserAndCourse({
+      userId: req.user.id,
+      courseId,
+    });
+    const progressByLessonId = Object.fromEntries(
+      progressRows.map((row) => [
+        Number(row.lesson_id),
+        {
+          completed: Boolean(row.completed),
+          completed_at: row.completed_at,
+        },
+      ])
+    );
+
+    lessons = lessons.map((lesson) => ({
+      ...lesson,
+      completed: Boolean(progressByLessonId[Number(lesson.id)]?.completed),
+      completed_at: progressByLessonId[Number(lesson.id)]?.completed_at || null,
+    }));
+  }
+
+  return sendSuccess(res, { lessons, accessMode }, "Lessons fetched");
 });
 
 const getLessonById = asyncHandler(async (req, res) => {
@@ -138,7 +164,7 @@ const markLessonComplete = asyncHandler(async (req, res) => {
     });
   }
 
-  return sendSuccess(res, { progress }, "Lesson completion saved");
+  return sendSuccess(res, { progress, lessonId, completed: Boolean(req.body.completed) }, "Lesson completion saved");
 });
 
 module.exports = {

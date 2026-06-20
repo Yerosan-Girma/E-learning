@@ -10,11 +10,12 @@ async function createPayment({
   screenshotPath,
   metaJson,
 }) {
-  const [result] = await pool.execute(
+  const result = await pool.query(
     `
       INSERT INTO payments
       (user_id, course_id, amount, gateway, transaction_id, status, screenshot_path, meta_json)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id
     `,
     [
       userId,
@@ -28,32 +29,76 @@ async function createPayment({
     ]
   );
 
-  return result.insertId;
+  return result.rows[0].id;
 }
 
 async function updatePaymentStatus({ paymentId, status, transactionId }) {
-  const [result] = await pool.execute(
+  const result = await pool.query(
     `
       UPDATE payments
-      SET status = ?, transaction_id = COALESCE(?, transaction_id)
-      WHERE id = ?
+      SET status = $1, transaction_id = COALESCE($2, transaction_id)
+      WHERE id = $3
     `,
     [status, transactionId || null, paymentId]
   );
 
-  return result.affectedRows;
+  return result.rowCount;
+}
+
+async function findPaymentById(paymentId) {
+  const result = await pool.query(
+    `
+      SELECT *
+      FROM payments
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [paymentId]
+  );
+
+  return result.rows[0] || null;
 }
 
 async function findPaymentByTransaction(transactionId) {
-  const [rows] = await pool.execute(
-    "SELECT * FROM payments WHERE transaction_id = ? LIMIT 1",
+  const result = await pool.query(
+    "SELECT * FROM payments WHERE transaction_id = $1 LIMIT 1",
     [transactionId]
   );
 
-  return rows[0] || null;
+  return result.rows[0] || null;
 }
 
-async function listPayments({ userId = null } = {}) {
+async function findLatestPaymentByUserAndCourse({ userId, courseId }) {
+  const result = await pool.query(
+    `
+      SELECT *
+      FROM payments
+      WHERE user_id = $1 AND course_id = $2
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `,
+    [userId, courseId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function findCompletedPaymentByUserAndCourse({ userId, courseId }) {
+  const result = await pool.query(
+    `
+      SELECT *
+      FROM payments
+      WHERE user_id = $1 AND course_id = $2 AND status = 'completed'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    `,
+    [userId, courseId]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function listPayments({ userId = null, courseId = null, status = null, gateway = null } = {}) {
   let query = `
     SELECT p.*, c.title AS course_title, u.full_name AS user_name, u.email
     FROM payments p
@@ -62,20 +107,41 @@ async function listPayments({ userId = null } = {}) {
   `;
 
   const values = [];
+  const clauses = [];
+  let paramIndex = 1;
 
   if (userId) {
-    query += " WHERE p.user_id = ?";
+    clauses.push(`p.user_id = $${paramIndex++}`);
     values.push(userId);
+  }
+
+  if (courseId) {
+    clauses.push(`p.course_id = $${paramIndex++}`);
+    values.push(courseId);
+  }
+
+  if (status) {
+    clauses.push(`p.status = $${paramIndex++}`);
+    values.push(status);
+  }
+
+  if (gateway) {
+    clauses.push(`p.gateway = $${paramIndex++}`);
+    values.push(gateway);
+  }
+
+  if (clauses.length) {
+    query += ` WHERE ${clauses.join(" AND ")}`;
   }
 
   query += " ORDER BY p.created_at DESC";
 
-  const [rows] = await pool.execute(query, values);
-  return rows;
+  const result = await pool.query(query, values);
+  return result.rows;
 }
 
 async function countPaymentSummary() {
-  const [rows] = await pool.execute(
+  const result = await pool.query(
     `
       SELECT status, COUNT(*) AS total
       FROM payments
@@ -83,13 +149,16 @@ async function countPaymentSummary() {
     `
   );
 
-  return rows;
+  return result.rows;
 }
 
 module.exports = {
   createPayment,
   updatePaymentStatus,
+  findPaymentById,
   findPaymentByTransaction,
+  findLatestPaymentByUserAndCourse,
+  findCompletedPaymentByUserAndCourse,
   listPayments,
   countPaymentSummary,
 };

@@ -20,7 +20,18 @@ Base URL: `http://localhost:5000/api`
 - Lessons: `/courses/:courseId/lessons`, `/lessons/:lessonId`
 - Enrollments: `/enrollments/:courseId`, `/enrollments/me/list`
 - Payments: `/payments/courses/:courseId/initialize`, `/payments/courses/:courseId/manual-proof`
+- Quizzes: `/courses/:courseId/quizzes`, `/quizzes/:quizId`, `/quizzes/:quizId/attempts`
 - Dashboards: `/dashboard/student`, `/dashboard/teacher`, `/dashboard/admin`
+- Users: `/users`, `/users/:userId/status`
+
+## Supported Platform Flow
+
+- Students can self-register and enroll in free courses instantly.
+- Premium courses require a simulated payment using Telebirr, Bank Transfer, or Cash.
+- Completed simulated payments generate a transaction ID and activate enrollment immediately.
+- Lessons and quizzes are protected so premium content is only available to authorized learners.
+- Instructors can create courses, lessons, quizzes, and quiz questions.
+- Admins can review users, courses, payments, and enrollments in one dashboard.
 
 ## Demo Accounts
 

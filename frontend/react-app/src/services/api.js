@@ -32,7 +32,10 @@ async function request(path, { method = "GET", token, body, isFormData = false }
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok || payload.success === false) {
-    const error = new Error(payload.message || "Request failed");
+    const errorMessage = typeof payload.message === 'string' 
+      ? payload.message 
+      : (payload.message ? JSON.stringify(payload.message) : "Request failed");
+    const error = new Error(errorMessage);
     error.status = response.status;
     error.details = payload.details || null;
     throw error;
@@ -55,6 +58,8 @@ export const api = {
   },
   getCourse: (courseId) => request(`/courses/${courseId}`),
   createCourse: (payload) => request("/courses", { method: "POST", body: payload }),
+  updateCourse: (courseId, payload) =>
+    request(`/courses/${courseId}`, { method: "PUT", body: payload }),
 
   listCourseLessons: (courseId) => request(`/courses/${courseId}/lessons`),
   createLesson: (courseId, payload) =>
@@ -64,6 +69,18 @@ export const api = {
     request(`/lessons/${lessonId}/completion`, {
       method: "PATCH",
       body: { completed },
+    }),
+
+  listCourseQuizzes: (courseId) => request(`/courses/${courseId}/quizzes`),
+  getQuiz: (quizId) => request(`/quizzes/${quizId}`),
+  createQuiz: (courseId, payload) =>
+    request(`/courses/${courseId}/quizzes`, { method: "POST", body: payload }),
+  createQuizQuestion: (quizId, payload) =>
+    request(`/quizzes/${quizId}/questions`, { method: "POST", body: payload }),
+  submitQuizAttempt: (quizId, answers) =>
+    request(`/quizzes/${quizId}/attempts`, {
+      method: "POST",
+      body: { answers },
     }),
 
   enrollCourse: (courseId) => request(`/enrollments/${courseId}`, { method: "POST" }),
@@ -76,14 +93,14 @@ export const api = {
       body: { status },
     }),
 
-  initializePayment: (courseId, gateway) =>
+  initializePayment: (courseId, payload) =>
     request(`/payments/courses/${courseId}/initialize`, {
       method: "POST",
-      body: { gateway },
+      body: payload,
     }),
   submitManualProof: (courseId, { screenshot, transactionId, notes }) => {
     const form = new FormData();
-    form.append("screenshot", screenshot);
+    if (screenshot) form.append("screenshot", screenshot);
     if (transactionId) form.append("transactionId", transactionId);
     if (notes) form.append("notes", notes);
 
@@ -94,5 +111,34 @@ export const api = {
     });
   },
   myPayments: () => request("/payments/me"),
-  allPayments: () => request("/payments"),
+  allPayments: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/payments${query ? `?${query}` : ""}`);
+  },
+  updatePaymentStatus: (paymentId, status) =>
+    request(`/payments/${paymentId}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+
+  listUsers: (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return request(`/users${query ? `?${query}` : ""}`);
+  },
+  updateUserStatus: (userId, status) =>
+    request(`/users/${userId}/status`, {
+      method: "PATCH",
+      body: { status },
+    }),
+
+  // Certificate API
+  getMyCertificates: () => request("/certificates/my"),
+  generateCertificate: (courseId) =>
+    request(`/certificates/courses/${courseId}/generate`, { method: "POST" }),
+  getCertificateByNumber: (certificateNumber) =>
+    request(`/certificates/number/${certificateNumber}`),
+  verifyCertificate: (verificationCode) =>
+    request(`/certificates/verify/${verificationCode}`),
+  getCourseCertificates: (courseId) =>
+    request(`/certificates/courses/${courseId}`),
 };

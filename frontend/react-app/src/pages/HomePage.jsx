@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import CourseCard from "../components/common/CourseCard";
 import { FEATURED_COURSES } from "../data/courses";
@@ -359,7 +359,7 @@ export default function HomePage() {
                       </div>
                       <div>
                         <h6 className="fw-bold">Phone Number</h6>
-                        <p className="text-muted mb-0">+1 (555) 123-4567</p>
+                        <p className="text-muted mb-0"> +251 972 467962</p>
                       </div>
                     </div>
                     <div className="d-flex">

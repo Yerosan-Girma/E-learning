@@ -1,26 +1,48 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { clearAuthUser, getAuthUser, setAuthUser } from "../utils/storage";
 
 const AuthContext = createContext(null);
 
-function roleToDashboardPath(role) {
+function roleToDashboardPath(role, studentHasEnrollments) {
   if (role === "admin") return "/dashboard/admin";
   if (role === "teacher") return "/dashboard/teacher";
-  return "/dashboard/student";
+  return studentHasEnrollments === false ? "/courses" : "/dashboard/student";
 }
 
 export function AuthProvider({ children, notify }) {
   const [user, setUser] = useState(() => getAuthUser());
+  const [studentHasEnrollments, setStudentHasEnrollments] = useState(null);
 
-  const login = async ({ email, password }) => {
-    if (!email || !password) {
-      notify?.("Please provide email and password.", "danger");
-      return { success: false };
+  const refreshStudentState = async () => {
+    const currentUser = getAuthUser();
+
+    if (!currentUser?.token || currentUser.role !== "student") {
+      setStudentHasEnrollments(null);
+      return false;
     }
 
-    const { user: apiUser, token } = await api.login({ email, password });
+    try {
+      const data = await api.myEnrollments();
+      const hasEnrollments = Boolean((data.enrollments || []).length);
+      setStudentHasEnrollments(hasEnrollments);
+      return hasEnrollments;
+    } catch {
+      setStudentHasEnrollments(false);
+      return false;
+    }
+  };
 
+  useEffect(() => {
+    if (user?.role === "student") {
+      refreshStudentState();
+      return;
+    }
+
+    setStudentHasEnrollments(null);
+  }, [user?.id, user?.role]);
+
+  const finishAuth = async (apiUser, token, successMessage = "Login successful.") => {
     const nextUser = {
       id: apiUser.id,
       name: apiUser.full_name,
@@ -31,13 +53,31 @@ export function AuthProvider({ children, notify }) {
 
     setAuthUser(nextUser);
     setUser(nextUser);
-    notify?.("Login successful.", "success");
+
+    let hasEnrollments = null;
+    if (nextUser.role === "student") {
+      hasEnrollments = await refreshStudentState();
+    } else {
+      setStudentHasEnrollments(null);
+    }
+
+    notify?.(successMessage, "success");
 
     return {
       success: true,
       user: nextUser,
-      redirectTo: roleToDashboardPath(nextUser.role),
+      redirectTo: roleToDashboardPath(nextUser.role, hasEnrollments),
     };
+  };
+
+  const login = async ({ email, password }) => {
+    if (!email || !password) {
+      notify?.("Please provide email and password.", "danger");
+      return { success: false };
+    }
+
+    const { user: apiUser, token } = await api.login({ email, password });
+    return finishAuth(apiUser, token, "Login successful.");
   };
 
   const signup = async ({ fullName, firstName, lastName, email, password, confirmPassword, role }) => {
@@ -59,29 +99,44 @@ export function AuthProvider({ children, notify }) {
       password,
       role: role || "student",
     });
+    return finishAuth(apiUser, token, "Account created successfully.");
+  };
 
-    const nextUser = {
-      id: apiUser.id,
-      name: apiUser.full_name,
-      email: apiUser.email,
-      role: apiUser.role,
-      token,
-    };
+  const accessLearner = async ({ fullName, email, password }) => {
+    if (!fullName || !email || !password) {
+      notify?.("Please provide full name, email, and password.", "danger");
+      return { success: false };
+    }
 
-    setAuthUser(nextUser);
-    setUser(nextUser);
-    notify?.("Account created successfully.", "success");
+    try {
+      const { user: apiUser, token } = await api.register({
+        fullName,
+        email,
+        password,
+        role: "student",
+      });
 
-    return {
-      success: true,
-      user: nextUser,
-      redirectTo: roleToDashboardPath(nextUser.role),
-    };
+      setStudentHasEnrollments(false);
+      return finishAuth(apiUser, token, "Welcome.");
+    } catch (error) {
+      if (error.status !== 409) {
+        throw error;
+      }
+    }
+
+    const { user: apiUser, token } = await api.login({ email, password });
+
+    if (apiUser.role !== "student") {
+      throw new Error("Use the default admin or teacher login.");
+    }
+
+    return finishAuth(apiUser, token, "Welcome back.");
   };
 
   const logout = () => {
     clearAuthUser();
     setUser(null);
+    setStudentHasEnrollments(null);
     notify?.("You have been logged out.", "info");
   };
 
@@ -92,11 +147,13 @@ export function AuthProvider({ children, notify }) {
       role: user?.role || "guest",
       login,
       signup,
+      accessLearner,
+      refreshStudentState,
       logout,
       notify,
-      dashboardPath: roleToDashboardPath(user?.role),
+      dashboardPath: roleToDashboardPath(user?.role, studentHasEnrollments),
     }),
-    [notify, user]
+    [notify, studentHasEnrollments, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -112,5 +169,5 @@ export function useAuth() {
 }
 
 export function getDashboardPathByRole(role) {
-  return roleToDashboardPath(role);
+  return roleToDashboardPath(role, true);
 }

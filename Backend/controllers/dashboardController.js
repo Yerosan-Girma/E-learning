@@ -4,44 +4,67 @@ const dashboardModel = require("../models/dashboardModel");
 const enrollmentModel = require("../models/enrollmentModel");
 const courseModel = require("../models/courseModel");
 const paymentModel = require("../models/paymentModel");
+const quizModel = require("../models/quizModel");
+const userModel = require("../models/userModel");
 
 const getStudentDashboard = asyncHandler(async (req, res) => {
-  const summary = await dashboardModel.getStudentDashboardSummary(req.user.id);
-  const enrollments = await enrollmentModel.listEnrollmentsByUser(req.user.id);
+  const [summary, enrollments, payments, quizAttempts] = await Promise.all([
+    dashboardModel.getStudentDashboardSummary(req.user.id),
+    enrollmentModel.listEnrollmentsByUser(req.user.id),
+    paymentModel.listPayments({ userId: req.user.id }),
+    quizModel.listAttemptsByUser(req.user.id),
+  ]);
 
   return sendSuccess(
     res,
     {
       summary,
       enrollments,
+      payments,
+      quizAttempts: quizAttempts.slice(0, 10),
     },
     "Student dashboard loaded"
   );
 });
 
 const getTeacherDashboard = asyncHandler(async (req, res) => {
-  const summary = await dashboardModel.getTeacherDashboardSummary(req.user.id);
-  const courses = await courseModel.listCoursesByInstructor(req.user.id);
+  const [summary, courses, recentPayments] = await Promise.all([
+    dashboardModel.getTeacherDashboardSummary(req.user.id),
+    courseModel.listCoursesByInstructor(req.user.id),
+    paymentModel.listPayments({ status: "completed" }),
+  ]);
+
+  const courseIds = new Set(courses.map((course) => Number(course.id)));
+  const filteredPayments = recentPayments.filter((payment) => courseIds.has(Number(payment.course_id)));
 
   return sendSuccess(
     res,
     {
       summary,
       courses,
+      recentPayments: filteredPayments.slice(0, 10),
     },
     "Teacher dashboard loaded"
   );
 });
 
 const getAdminDashboard = asyncHandler(async (req, res) => {
-  const summary = await dashboardModel.getAdminDashboardSummary();
-  const payments = await paymentModel.listPayments();
+  const [summary, payments, enrollments, users, courses] = await Promise.all([
+    dashboardModel.getAdminDashboardSummary(),
+    paymentModel.listPayments(),
+    enrollmentModel.listAllEnrollments(),
+    userModel.listUsers(),
+    courseModel.listCourses({ includeUnpublished: true }),
+  ]);
 
   return sendSuccess(
     res,
     {
       summary,
       recentPayments: payments.slice(0, 10),
+      recentEnrollments: enrollments.slice(0, 10),
+      users,
+      courses,
     },
     "Admin dashboard loaded"
   );

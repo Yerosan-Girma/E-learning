@@ -38,4 +38,5 @@ function optionalProtect(req, res, next) {
 module.exports = {
   protect,
   optionalProtect,
+  authenticate: protect,
 };

@@ -24,5 +24,11 @@ router.post(
 router.post("/webhook", paymentController.handlePaymentWebhook);
 router.get("/me", protect, paymentController.getMyPayments);
 router.get("/", protect, requireRole("admin"), paymentController.listAllPayments);
+router.patch(
+  "/:paymentId/status",
+  protect,
+  requireRole("admin"),
+  paymentController.updatePaymentStatus
+);
 
 module.exports = router;

@@ -4,6 +4,10 @@ const { signToken } = require("../utils/jwt");
 const userModel = require("../models/userModel");
 
 async function registerUser({ fullName, email, password, role = "student" }) {
+  if (!["student", "teacher"].includes(role)) {
+    throw new ApiError(403, "Only student and instructor accounts can self-register");
+  }
+
   const existing = await userModel.findByEmail(email);
   if (existing) {
     throw new ApiError(409, "Email already exists");

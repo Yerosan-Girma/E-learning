@@ -5,12 +5,14 @@ import {
   Route,
   Routes,
   useLocation,
+  useParams,
   useSearchParams,
 } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteFooter from "./components/layout/SiteFooter";
 import SiteNavbar from "./components/layout/SiteNavbar";
 import { useAuth } from "./context/AuthContext";
+import PaymentPage from "./pages/PaymentPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
 import CoursesPage from "./pages/CoursesPage";
@@ -49,7 +51,12 @@ function LegacyCourseRedirect() {
 function LegacyLearningRedirect() {
   const [searchParams] = useSearchParams();
   const id = searchParams.get("course") || "1";
-  return <Navigate to={`/learning/${id}`} replace />;
+  return <Navigate to={`/courses/${id}/dashboard`} replace />;
+}
+
+function LegacyLearningRouteRedirect() {
+  const { courseId } = useParams();
+  return <Navigate to={`/courses/${courseId}/dashboard`} replace />;
 }
 
 function DashboardRedirect() {
@@ -60,7 +67,9 @@ function DashboardRedirect() {
 function AppShell() {
   const location = useLocation();
   const hideLayout =
-    location.pathname.startsWith("/learning/") || location.pathname === "/login";
+    (location.pathname.startsWith("/courses/") && location.pathname.endsWith("/dashboard")) ||
+    location.pathname.startsWith("/learning/") ||
+    location.pathname === "/login";
 
   return (
     <>
@@ -75,10 +84,28 @@ function AppShell() {
         <Route path="/courses/:id" element={<CourseDetailsPage />} />
 
         <Route
-          path="/learning/:courseId"
+          path="/payment/:courseId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <PaymentPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/courses/:courseId/dashboard"
           element={
             <ProtectedRoute allowedRoles={["student"]}>
               <LearningPage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/learning/:courseId"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <LegacyLearningRouteRedirect />
             </ProtectedRoute>
           }
         />

@@ -13,7 +13,7 @@ export default function SiteNavbar() {
 
   const isHome = location.pathname === "/";
 
-  const categories = useMemo(() => COURSE_CATEGORIES.slice(0, 6), []);
+  const categories = useMemo(() => COURSE_CATEGORIES, []);
 
   const handleNavAction = () => {
     setIsMobileOpen(false);

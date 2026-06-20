@@ -4,18 +4,19 @@ import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, signup, notify, isLoggedIn, dashboardPath } = useAuth();
+  const { accessLearner, login, notify, isLoggedIn, dashboardPath } = useAuth();
 
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState("student");
   const [loading, setLoading] = useState(false);
 
-  const [loginForm, setLoginForm] = useState({ email: "", password: "" });
-  const [signupForm, setSignupForm] = useState({
+  const [studentForm, setStudentForm] = useState({
     fullName: "",
     email: "",
     password: "",
-    confirmPassword: "",
-    role: "student",
+  });
+  const [staffForm, setStaffForm] = useState({
+    email: "",
+    password: "",
   });
 
   useEffect(() => {
@@ -24,33 +25,33 @@ export default function LoginPage() {
     }
   }, [dashboardPath, isLoggedIn, navigate]);
 
-  const handleLoginSubmit = async (event) => {
+  const handleStudentSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
 
     try {
-      const result = await login(loginForm);
+      const result = await accessLearner(studentForm);
       if (result?.success) {
         navigate(result.redirectTo);
       }
     } catch (error) {
-      notify(error.message || "Login failed", "danger");
+      notify(error.message || "Could not access student account", "danger");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignupSubmit = async (event) => {
+  const handleStaffSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
 
     try {
-      const result = await signup(signupForm);
+      const result = await login(staffForm);
       if (result?.success) {
         navigate(result.redirectTo);
       }
     } catch (error) {
-      notify(error.message || "Registration failed", "danger");
+      notify(error.message || "Login failed", "danger");
     } finally {
       setLoading(false);
     }
@@ -64,155 +65,119 @@ export default function LoginPage() {
             <div className="card-body p-4 p-md-5">
               <div className="text-center mb-4">
                 <h2 className="fw-bold mb-2">Account Access</h2>
-                <p className="text-muted mb-0">Login or register to access student, teacher, or admin dashboards.</p>
               </div>
 
               <ul className="nav nav-pills nav-fill mb-4">
                 <li className="nav-item">
                   <button
-                    className={`nav-link ${activeTab === "login" ? "active" : ""}`}
+                    className={`nav-link ${activeTab === "student" ? "active" : ""}`}
                     type="button"
-                    onClick={() => setActiveTab("login")}
+                    onClick={() => setActiveTab("student")}
                   >
-                    Login
+                    Student
                   </button>
                 </li>
                 <li className="nav-item">
                   <button
-                    className={`nav-link ${activeTab === "register" ? "active" : ""}`}
+                    className={`nav-link ${activeTab === "staff" ? "active" : ""}`}
                     type="button"
-                    onClick={() => setActiveTab("register")}
+                    onClick={() => setActiveTab("staff")}
                   >
-                    Register
+                    Admin / Teacher
                   </button>
                 </li>
               </ul>
 
-              {activeTab === "login" ? (
-                <form onSubmit={handleLoginSubmit}>
+              {activeTab === "student" ? (
+                <form onSubmit={handleStudentSubmit}>
                   <div className="mb-3">
-                    <label htmlFor="loginEmailPage" className="form-label">
-                      Email
+                    <label htmlFor="studentName" className="form-label">
+                      Full Name
                     </label>
                     <input
-                      id="loginEmailPage"
-                      type="email"
+                      id="studentName"
+                      type="text"
                       className="form-control"
                       required
-                      value={loginForm.email}
+                      value={studentForm.fullName}
                       onChange={(event) =>
-                        setLoginForm((prev) => ({ ...prev, email: event.target.value }))
+                        setStudentForm((prev) => ({ ...prev, fullName: event.target.value }))
                       }
                     />
                   </div>
 
                   <div className="mb-3">
-                    <label htmlFor="loginPasswordPage" className="form-label">
+                    <label htmlFor="studentEmail" className="form-label">
+                      Email
+                    </label>
+                    <input
+                      id="studentEmail"
+                      type="email"
+                      className="form-control"
+                      required
+                      value={studentForm.email}
+                      onChange={(event) =>
+                        setStudentForm((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="studentPassword" className="form-label">
                       Password
                     </label>
                     <input
-                      id="loginPasswordPage"
+                      id="studentPassword"
                       type="password"
                       className="form-control"
                       required
-                      value={loginForm.password}
+                      value={studentForm.password}
                       onChange={(event) =>
-                        setLoginForm((prev) => ({ ...prev, password: event.target.value }))
+                        setStudentForm((prev) => ({ ...prev, password: event.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                    {loading ? "Please wait..." : "Continue"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleStaffSubmit}>
+                  <div className="mb-3">
+                    <label htmlFor="staffEmail" className="form-label">
+                      Email
+                    </label>
+                    <input
+                      id="staffEmail"
+                      type="email"
+                      className="form-control"
+                      required
+                      value={staffForm.email}
+                      onChange={(event) =>
+                        setStaffForm((prev) => ({ ...prev, email: event.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label htmlFor="staffPassword" className="form-label">
+                      Password
+                    </label>
+                    <input
+                      id="staffPassword"
+                      type="password"
+                      className="form-control"
+                      required
+                      value={staffForm.password}
+                      onChange={(event) =>
+                        setStaffForm((prev) => ({ ...prev, password: event.target.value }))
                       }
                     />
                   </div>
 
                   <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                     {loading ? "Signing in..." : "Login"}
-                  </button>
-                </form>
-              ) : (
-                <form onSubmit={handleSignupSubmit}>
-                  <div className="mb-3">
-                    <label htmlFor="registerName" className="form-label">
-                      Full Name
-                    </label>
-                    <input
-                      id="registerName"
-                      type="text"
-                      className="form-control"
-                      required
-                      value={signupForm.fullName}
-                      onChange={(event) =>
-                        setSignupForm((prev) => ({ ...prev, fullName: event.target.value }))
-                      }
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label htmlFor="registerEmail" className="form-label">
-                      Email
-                    </label>
-                    <input
-                      id="registerEmail"
-                      type="email"
-                      className="form-control"
-                      required
-                      value={signupForm.email}
-                      onChange={(event) =>
-                        setSignupForm((prev) => ({ ...prev, email: event.target.value }))
-                      }
-                    />
-                  </div>
-
-                  <div className="mb-3">
-                    <label htmlFor="registerRole" className="form-label">
-                      Role
-                    </label>
-                    <select
-                      id="registerRole"
-                      className="form-select"
-                      value={signupForm.role}
-                      onChange={(event) =>
-                        setSignupForm((prev) => ({ ...prev, role: event.target.value }))
-                      }
-                    >
-                      <option value="student">Student</option>
-                      <option value="teacher">Teacher</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                  </div>
-
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="registerPassword" className="form-label">
-                        Password
-                      </label>
-                      <input
-                        id="registerPassword"
-                        type="password"
-                        className="form-control"
-                        required
-                        value={signupForm.password}
-                        onChange={(event) =>
-                          setSignupForm((prev) => ({ ...prev, password: event.target.value }))
-                        }
-                      />
-                    </div>
-                    <div className="col-md-6 mb-3">
-                      <label htmlFor="registerConfirmPassword" className="form-label">
-                        Confirm Password
-                      </label>
-                      <input
-                        id="registerConfirmPassword"
-                        type="password"
-                        className="form-control"
-                        required
-                        value={signupForm.confirmPassword}
-                        onChange={(event) =>
-                          setSignupForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                    {loading ? "Creating account..." : "Register"}
                   </button>
                 </form>
               )}
