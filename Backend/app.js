@@ -106,7 +106,11 @@ app.get("/api/health", (req, res) => {
   return sendSuccess(res, { uptime: process.uptime() }, "API is running");
 });
 
-app.use("/api/auth", authLimiter, authRoutes);
+// Apply auth rate limiter to all auth routes except Google OAuth
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/logout", authLimiter);
+app.use("/api/auth", authRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api", lessonRoutes);
 app.use("/api", quizRoutes);

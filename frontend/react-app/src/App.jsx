@@ -78,22 +78,29 @@ function GoogleCallback() {
     if (token) {
       const fetchUserAndLogin = async () => {
         try {
-          // Set the token temporarily to make API calls
-          const tempUser = { token };
-          setAuthUser(tempUser);
+          // Decode the JWT token to get user info directly
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
           
-          // Fetch user profile from API
-          const { user: apiUser } = await api.profile();
+          const userPayload = JSON.parse(jsonPayload);
           
-          // Create proper user object
+          console.log("Google OAuth token payload:", userPayload);
+          
+          // Create user object from token payload
           const user = {
-            id: apiUser.id,
-            name: apiUser.full_name,
-            email: apiUser.email,
-            role: apiUser.role,
+            id: userPayload.id,
+            name: userPayload.full_name || userPayload.name || userPayload.email?.split('@')[0],
+            email: userPayload.email,
+            role: userPayload.role || 'student',
             token
           };
           
+          console.log("Google OAuth user object:", user);
+          
+          // Set user in storage and context
           setAuthUser(user);
           setUser(user);
           

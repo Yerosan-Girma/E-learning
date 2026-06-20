@@ -185,11 +185,55 @@ CREATE TABLE IF NOT EXISTS payments (
     REFERENCES courses(id)
 );
 
+-- ===========================================
+-- Table: subscriptions
+-- ===========================================
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  
+  -- ENUM('basic', 'premium', 'enterprise') converted to VARCHAR + CHECK constraint
+  plan_type VARCHAR(20) NOT NULL DEFAULT 'basic'
+    CHECK (plan_type IN ('basic', 'premium', 'enterprise')),
+  
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  
+  -- ENUM('telebirr', 'bank_transfer', 'cash', 'stripe') converted to VARCHAR + CHECK constraint
+  gateway VARCHAR(20) NOT NULL DEFAULT 'telebirr'
+    CHECK (gateway IN ('telebirr', 'bank_transfer', 'cash', 'stripe')),
+  
+  transaction_id VARCHAR(120),
+  
+  -- ENUM('active', 'cancelled', 'expired') converted to VARCHAR + CHECK constraint
+  status VARCHAR(20) NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'cancelled', 'expired')),
+  
+  start_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  end_date TIMESTAMP,
+  
+  -- TINYINT(1) converted to BOOLEAN
+  auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+  
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  
+  CONSTRAINT fk_subscription_user 
+    FOREIGN KEY (user_id) 
+    REFERENCES users(id) 
+    ON DELETE CASCADE
+);
+
 COMMENT ON TABLE payments IS 'Payment transactions for course enrollments';
 COMMENT ON COLUMN payments.gateway IS 'Payment gateway: telebirr, bank_transfer, or cash (converted from MySQL ENUM)';
 COMMENT ON COLUMN payments.status IS 'Payment status: initiated, pending, completed, or failed (converted from MySQL ENUM)';
 COMMENT ON COLUMN payments.meta_json IS 'Payment metadata (converted from MySQL JSON to PostgreSQL JSONB)';
 COMMENT ON COLUMN payments.updated_at IS 'Automatically updated on row modification via trigger';
+
+COMMENT ON TABLE subscriptions IS 'User subscriptions for premium access';
+COMMENT ON COLUMN subscriptions.plan_type IS 'Subscription plan: basic, premium, or enterprise';
+COMMENT ON COLUMN subscriptions.status IS 'Subscription status: active, cancelled, or expired';
+COMMENT ON COLUMN subscriptions.auto_renew IS 'Auto-renewal flag (converted from MySQL TINYINT(1))';
+COMMENT ON COLUMN subscriptions.updated_at IS 'Automatically updated on row modification via trigger';
 
 -- ===========================================
 -- Table: lesson_views
@@ -345,6 +389,12 @@ CREATE TRIGGER update_course_lessons_updated_at
 -- Payments table trigger
 CREATE TRIGGER update_payments_updated_at 
   BEFORE UPDATE ON payments 
+  FOR EACH ROW 
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- Subscriptions table trigger
+CREATE TRIGGER update_subscriptions_updated_at 
+  BEFORE UPDATE ON subscriptions 
   FOR EACH ROW 
   EXECUTE FUNCTION update_updated_at_column();
 

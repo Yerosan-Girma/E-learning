@@ -17,21 +17,29 @@ async function getSubscriptionById(id) {
 }
 
 async function getActiveSubscriptionByUser(userId) {
-  const query = `
-    SELECT * FROM subscriptions
-    WHERE user_id = $1 AND status = 'active' AND (end_date IS NULL OR end_date > NOW())
-    ORDER BY created_at DESC
-    LIMIT 1
-  `;
-  const result = await pool.query(query, [userId]);
-  return result.rows[0] || null;
+  try {
+    const query = `
+      SELECT * FROM subscriptions
+      WHERE user_id = $1 AND status = 'active' AND (end_date IS NULL OR end_date > NOW())
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows[0] || null;
+  } catch (error) {
+    // If table or column doesn't exist, return null
+    if (error.code === '42P01' || error.code === '42703') {
+      return null;
+    }
+    throw error;
+  }
 }
 
 async function getSubscriptionsByUser(userId) {
   const query = `
     SELECT * FROM subscriptions
     WHERE user_id = $1
-    ORDER BY created_at DESC
+    ORDER BY id DESC
   `;
   const result = await pool.query(query, [userId]);
   return result.rows;

@@ -68,11 +68,14 @@ export default function CourseDetailsPage() {
 
     if (course?.isFree) {
       try {
-        await api.enrollCourse(id);
+        console.log("Enrolling in free course:", id);
+        const result = await api.enrollCourse(id);
+        console.log("Enrollment result:", result);
         await refreshStudentState();
         notify("Enrolled successfully! Welcome to the course.", "success");
         navigate(dashboardPath);
       } catch (error) {
+        console.error("Enrollment error:", error);
         notify(error.message || "Could not enroll in free course", "danger");
       }
       return;
