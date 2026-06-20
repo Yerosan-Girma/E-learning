@@ -7,6 +7,7 @@ import {
   useLocation,
   useParams,
   useSearchParams,
+  useNavigate,
 } from "react-router-dom";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteFooter from "./components/layout/SiteFooter";
@@ -66,12 +67,75 @@ function DashboardRedirect() {
   return <Navigate to={isLoggedIn ? dashboardPath : "/login"} replace />;
 }
 
+function GoogleCallback() {
+  const [searchParams] = useSearchParams();
+  const { setUser, notify, dashboardPath, refreshStudentState } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = searchParams.get("token");
+    
+    if (token) {
+      const fetchUserAndLogin = async () => {
+        try {
+          // Set the token temporarily to make API calls
+          const tempUser = { token };
+          setAuthUser(tempUser);
+          
+          // Fetch user profile from API
+          const { user: apiUser } = await api.profile();
+          
+          // Create proper user object
+          const user = {
+            id: apiUser.id,
+            name: apiUser.full_name,
+            email: apiUser.email,
+            role: apiUser.role,
+            token
+          };
+          
+          setAuthUser(user);
+          setUser(user);
+          
+          // Refresh student state if needed
+          if (user.role === "student") {
+            await refreshStudentState();
+          }
+          
+          notify("Login successful with Google", "success");
+          
+          // Clean the URL and redirect to dashboard
+          window.history.replaceState({}, document.title, "/auth/callback");
+          navigate(dashboardPath);
+        } catch (error) {
+          console.error("Google OAuth error:", error);
+          notify("Failed to login with Google", "danger");
+          navigate("/login");
+        }
+      };
+      
+      fetchUserAndLogin();
+    } else {
+      // No token in URL, redirect to login
+      navigate("/login");
+    }
+  }, [searchParams, setUser, notify, dashboardPath, refreshStudentState, navigate]);
+
+  return <div className="container py-5 text-center">
+    <div className="spinner-border text-primary" role="status">
+      <span className="visually-hidden">Loading...</span>
+    </div>
+    <p className="mt-3">Completing Google login...</p>
+  </div>;
+}
+
 function AppShell() {
   const location = useLocation();
   const hideLayout =
     (location.pathname.startsWith("/courses/") && location.pathname.endsWith("/dashboard")) ||
     location.pathname.startsWith("/learning/") ||
-    location.pathname === "/login";
+    location.pathname === "/login" ||
+    location.pathname === "/auth/callback";
 
   return (
     <>
@@ -81,6 +145,7 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<GoogleCallback />} />
 
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailsPage />} />

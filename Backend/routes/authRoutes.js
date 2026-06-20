@@ -48,10 +48,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     (req, res) => {
       // Successful authentication, generate JWT token
       const { signToken } = require("../utils/jwt");
-      const token = signToken({ id: req.user.id, role: req.user.role, email: req.user.email });
+      const token = signToken({ id: req.user.id, role: req.user.role, email: req.user.email, full_name: req.user.full_name });
       
-      // Redirect to frontend with token
-      res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:5173'}?token=${token}`);
+      // Redirect to frontend callback handler with token
+      res.redirect(`${process.env.CORS_ORIGIN || 'http://localhost:5173'}/auth/callback?token=${token}`);
     }
   );
 } else {
