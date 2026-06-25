@@ -94,7 +94,7 @@ export default function SiteNavbar() {
                   <li key={category}>
                     <Link
                       className="dropdown-item"
-                      to={`/courses?category=${slugifyCategory(category)}`}
+                      to={`/courses?category=${encodeURIComponent(category)}`}
                       onClick={handleNavAction}
                     >
                       {category}

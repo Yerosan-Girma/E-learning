@@ -42,16 +42,15 @@ export default function CoursesPage() {
   const resolvedCategory = useMemo(() => {
     if (!selectedCategory) return "";
 
-    // Try deslugifying first
-    const deslugified = deslugifyCategory(selectedCategory);
-    if (categories.includes(deslugified)) return deslugified;
-
-    // Then try exact match
+    // useSearchParams automatically decodes URL parameters
+    // So selectedCategory should already be the decoded value
     if (categories.includes(selectedCategory)) return selectedCategory;
 
-    // Finally try slugified match
-    const matchedBySlug = categories.find((category) => slugifyCategory(category) === selectedCategory);
-    if (matchedBySlug) return matchedBySlug;
+    // Fallback: try case-insensitive match
+    const matchedCaseInsensitive = categories.find(
+      (cat) => cat.toLowerCase() === selectedCategory.toLowerCase()
+    );
+    if (matchedCaseInsensitive) return matchedCaseInsensitive;
 
     return "";
   }, [categories, selectedCategory]);
