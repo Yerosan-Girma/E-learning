@@ -71,11 +71,15 @@ export default function CoursesPage() {
   const resolvedCategory = useMemo(() => {
     if (!selectedCategory) return "";
 
-    return (
-      categories.find((category) => slugifyCategory(category) === selectedCategory) ||
-      categories.find((category) => category === selectedCategory) ||
-      ""
-    );
+    // First try to match by slugified version
+    const matchedBySlug = categories.find((category) => slugifyCategory(category) === selectedCategory);
+    if (matchedBySlug) return matchedBySlug;
+
+    // Then try exact match
+    const matchedExact = categories.find((category) => category === selectedCategory);
+    if (matchedExact) return matchedExact;
+
+    return "";
   }, [categories, selectedCategory]);
 
   // Server-side filtering is now used, so no need for client-side filtering

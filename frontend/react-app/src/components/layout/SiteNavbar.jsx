@@ -1,8 +1,9 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { COURSE_CATEGORIES } from "../../data/courses";
 import { slugifyCategory } from "../../utils/format";
 import { useAuth } from "../../context/AuthContext";
+import { api } from "../../services/api";
 
 export default function SiteNavbar() {
   const location = useLocation();
@@ -10,10 +11,27 @@ export default function SiteNavbar() {
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCoursesOpen, setIsCoursesOpen] = useState(false);
+  const [categories, setCategories] = useState(COURSE_CATEGORIES);
 
   const isHome = location.pathname === "/";
 
-  const categories = useMemo(() => COURSE_CATEGORIES, []);
+  // Fetch categories from backend on mount
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await api.listCourses({ limit: 1 });
+        const uniqueCategories = new Set(data.courses?.map((course) => course.category).filter(Boolean));
+        const fetchedCategories = Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b));
+        if (fetchedCategories.length > 0) {
+          setCategories(fetchedCategories);
+        }
+      } catch (error) {
+        // Fallback to static categories if fetch fails
+        console.error("Failed to fetch categories:", error);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const handleNavAction = () => {
     setIsMobileOpen(false);
