@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { Link, NavLink, useLocation } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { COURSE_CATEGORIES } from "../../data/courses";
 import { slugifyCategory } from "../../utils/format";
 import { useAuth } from "../../context/AuthContext";
@@ -7,6 +7,7 @@ import { api } from "../../services/api";
 
 export default function SiteNavbar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isLoggedIn, dashboardPath, logout } = useAuth();
 
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -92,22 +93,32 @@ export default function SiteNavbar() {
               <ul className={`dropdown-menu ${isCoursesOpen ? "show" : ""}`}>
                 {categories.map((category) => (
                   <li key={category}>
-                    <Link
+                    <button
                       className="dropdown-item"
-                      to={`/courses?category=${encodeURIComponent(category)}`}
-                      onClick={handleNavAction}
+                      type="button"
+                      onClick={() => {
+                        navigate(`/courses?category=${encodeURIComponent(category)}`);
+                        handleNavAction();
+                      }}
                     >
                       {category}
-                    </Link>
+                    </button>
                   </li>
                 ))}
                 <li>
                   <hr className="dropdown-divider" />
                 </li>
                 <li>
-                  <Link className="dropdown-item" to="/courses?price=free" onClick={handleNavAction}>
+                  <button
+                    className="dropdown-item"
+                    type="button"
+                    onClick={() => {
+                      navigate("/courses?price=free");
+                      handleNavAction();
+                    }}
+                  >
                     Free Courses
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </li>
