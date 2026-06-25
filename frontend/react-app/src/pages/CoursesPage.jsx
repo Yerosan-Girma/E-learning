@@ -21,20 +21,47 @@ export default function CoursesPage() {
   const [freeOnly, setFreeOnly] = useState(initialFreeOnly);
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
 
   useEffect(() => {
     async function loadCourses() {
       setLoading(true);
       try {
-        const data = await api.listCourses();
+        const params = {
+          page: currentPage,
+          limit: PAGE_SIZE,
+        };
+        
+        if (searchTerm) params.search = searchTerm;
+        if (selectedCategory) params.category = selectedCategory;
+        if (selectedLevel !== 'all') params.level = selectedLevel;
+        if (freeOnly) params.maxPrice = 0;
+        
+        // Map sortBy to backend parameters
+        if (sortBy === 'newest') {
+          params.sortBy = 'created_at';
+          params.sortOrder = 'DESC';
+        } else if (sortBy === 'students') {
+          params.sortBy = 'total_students';
+          params.sortOrder = 'DESC';
+        } else if (sortBy === 'price-low') {
+          params.sortBy = 'price';
+          params.sortOrder = 'ASC';
+        } else if (sortBy === 'price-high') {
+          params.sortBy = 'price';
+          params.sortOrder = 'DESC';
+        }
+
+        const data = await api.listCourses(params);
         setCourses((data.courses || []).map(normalizeCourse));
+        setPagination(data.pagination || { total: 0, totalPages: 1 });
       } finally {
         setLoading(false);
       }
     }
 
     loadCourses();
-  }, []);
+  }, [currentPage, searchTerm, selectedCategory, selectedLevel, freeOnly, sortBy]);
 
   const categories = useMemo(() => {
     const unique = new Set(courses.map((course) => course.category).filter(Boolean));
@@ -51,38 +78,8 @@ export default function CoursesPage() {
     );
   }, [categories, selectedCategory]);
 
-  const filteredCourses = useMemo(() => {
-    const lowerSearch = searchTerm.trim().toLowerCase();
-
-    const result = courses.filter((course) => {
-      const matchesSearch =
-        !lowerSearch ||
-        course.title.toLowerCase().includes(lowerSearch) ||
-        course.instructor.toLowerCase().includes(lowerSearch) ||
-        course.category.toLowerCase().includes(lowerSearch);
-
-      const matchesCategory = !resolvedCategory || course.category === resolvedCategory;
-      const matchesLevel =
-        selectedLevel === "all" || course.level.toLowerCase() === selectedLevel.toLowerCase();
-      const matchesPrice = freeOnly ? course.isFree : true;
-
-      return matchesSearch && matchesCategory && matchesLevel && matchesPrice;
-    });
-
-    return [...result].sort((a, b) => {
-      if (sortBy === "price-low") return a.effectivePrice - b.effectivePrice;
-      if (sortBy === "price-high") return b.effectivePrice - a.effectivePrice;
-      if (sortBy === "students") return b.enrolledStudents - a.enrolledStudents;
-      return Number(b.id) - Number(a.id);
-    });
-  }, [courses, freeOnly, resolvedCategory, searchTerm, selectedLevel, sortBy]);
-
-  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
-
-  const paginatedCourses = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredCourses.slice(start, start + PAGE_SIZE);
-  }, [currentPage, filteredCourses]);
+  // Server-side filtering is now used, so no need for client-side filtering
+  const totalPages = pagination.totalPages;
 
   const resetFilters = () => {
     setSearchTerm("");
@@ -197,8 +194,8 @@ export default function CoursesPage() {
         <div className="col-lg-9">
           <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <p className="mb-0">
-              Showing <strong>{filteredCourses.length}</strong> course
-              {filteredCourses.length === 1 ? "" : "s"}
+              Showing <strong>{courses.length}</strong> of <strong>{pagination.total}</strong> course
+              {pagination.total === 1 ? "" : "s"}
             </p>
 
             <select
@@ -221,8 +218,8 @@ export default function CoursesPage() {
           ) : (
             <>
               <div className="row">
-                {paginatedCourses.length > 0 ? (
-                  paginatedCourses.map((course) => <CourseCard key={course.id} course={course} />)
+                {courses.length > 0 ? (
+                  courses.map((course) => <CourseCard key={course.id} course={course} />)
                 ) : (
                   <div className="col-12">
                     <div className="alert alert-light border">
@@ -232,7 +229,7 @@ export default function CoursesPage() {
                 )}
               </div>
 
-              {filteredCourses.length > PAGE_SIZE && (
+              {pagination.totalPages > 1 && (
                 <nav aria-label="Courses pagination" className="mt-4">
                   <ul className="pagination justify-content-center">
                     <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>

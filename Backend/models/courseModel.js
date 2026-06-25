@@ -5,28 +5,34 @@ const COURSE_SELECT = `
     c.*,
     u.full_name AS instructor_name,
     u.email AS instructor_email,
-    (
-      SELECT COUNT(*)
-      FROM course_lessons l
-      WHERE l.course_id = c.id
-    ) AS lesson_count,
-    (
-      SELECT COUNT(*)
-      FROM course_quizzes q
-      WHERE q.course_id = c.id
-    ) AS quiz_count,
-    (
-      SELECT COUNT(*)
-      FROM enrollments e
-      WHERE e.course_id = c.id AND e.status = 'approved'
-    ) AS enrolled_students,
-    (
-      SELECT COALESCE(SUM(p.amount), 0)
-      FROM payments p
-      WHERE p.course_id = c.id AND p.status = 'completed'
-    ) AS revenue_total
+    COALESCE(lc.lesson_count, 0) AS lesson_count,
+    COALESCE(qc.quiz_count, 0) AS quiz_count,
+    COALESCE(ec.enrolled_students, 0) AS enrolled_students,
+    COALESCE(rc.revenue_total, 0) AS revenue_total
   FROM courses c
   INNER JOIN users u ON c.instructor_id = u.id
+  LEFT JOIN (
+    SELECT course_id, COUNT(*) as lesson_count
+    FROM course_lessons
+    GROUP BY course_id
+  ) lc ON c.id = lc.course_id
+  LEFT JOIN (
+    SELECT course_id, COUNT(*) as quiz_count
+    FROM course_quizzes
+    GROUP BY course_id
+  ) qc ON c.id = qc.course_id
+  LEFT JOIN (
+    SELECT course_id, COUNT(*) as enrolled_students
+    FROM enrollments
+    WHERE status = 'approved'
+    GROUP BY course_id
+  ) ec ON c.id = ec.course_id
+  LEFT JOIN (
+    SELECT course_id, COALESCE(SUM(amount), 0) as revenue_total
+    FROM payments
+    WHERE status = 'completed'
+    GROUP BY course_id
+  ) rc ON c.id = rc.course_id
 `;
 
 async function createCourse({
@@ -126,6 +132,8 @@ async function listCourses({
   maxPrice = null,
   sortBy = 'created_at',
   sortOrder = 'DESC',
+  page = 1,
+  limit = 20,
 } = {}) {
   let query = `${COURSE_SELECT} WHERE 1 = 1`;
   const values = [];
@@ -184,8 +192,75 @@ async function listCourses({
 
   query += ` ORDER BY c.${sortColumn} ${validSortOrder}`;
 
+  // Add pagination
+  const offset = (page - 1) * limit;
+  query += ` LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+  values.push(limit, offset);
+
   const result = await pool.query(query, values);
-  return result.rows;
+  
+  // Get total count for pagination
+  let countQuery = `SELECT COUNT(*) FROM courses c WHERE 1 = 1`;
+  let countValues = [];
+  let countParamIndex = 1;
+
+  if (!includeUnpublished) {
+    countQuery += " AND c.is_published = TRUE";
+  }
+
+  if (category) {
+    countQuery += ` AND c.category = $${countParamIndex++}`;
+    countValues.push(category);
+  }
+
+  if (instructorId) {
+    countQuery += ` AND c.instructor_id = $${countParamIndex++}`;
+    countValues.push(instructorId);
+  }
+
+  if (level) {
+    countQuery += ` AND c.level = $${countParamIndex++}`;
+    countValues.push(level);
+  }
+
+  if (language) {
+    countQuery += ` AND c.language = $${countParamIndex++}`;
+    countValues.push(language);
+  }
+
+  if (featured !== null) {
+    countQuery += ` AND c.featured = $${countParamIndex++}`;
+    countValues.push(featured);
+  }
+
+  if (minPrice !== null) {
+    countQuery += ` AND c.price >= $${countParamIndex++}`;
+    countValues.push(minPrice);
+  }
+
+  if (maxPrice !== null) {
+    countQuery += ` AND c.price <= $${countParamIndex++}`;
+    countValues.push(maxPrice);
+  }
+
+  if (search) {
+    countQuery += ` AND (c.title ILIKE $${countParamIndex} OR c.description ILIKE $${countParamIndex + 1} OR c.category ILIKE $${countParamIndex + 2} OR c.tags ILIKE $${countParamIndex + 3})`;
+    const term = `%${search}%`;
+    countValues.push(term, term, term, term);
+  }
+
+  const countResult = await pool.query(countQuery, countValues);
+  const total = parseInt(countResult.rows[0].count);
+
+  return {
+    courses: result.rows,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 async function listCoursesByInstructor(instructorId) {

@@ -17,12 +17,20 @@ function serializeCourse(course) {
 }
 
 const listCourses = asyncHandler(async (req, res) => {
-  const { category, search } = req.query;
-  const courses = await courseModel.listCourses({ category, search });
+  const { category, search, page = 1, limit = 20 } = req.query;
+  const result = await courseModel.listCourses({ 
+    category, 
+    search, 
+    page: parseInt(page), 
+    limit: parseInt(limit) 
+  });
 
   return sendSuccess(
     res,
-    { courses: courses.map(serializeCourse) },
+    { 
+      courses: result.courses.map(serializeCourse),
+      pagination: result.pagination 
+    },
     "Courses fetched"
   );
 });
