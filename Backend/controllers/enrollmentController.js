@@ -79,29 +79,52 @@ const enrollInCourse = asyncHandler(async (req, res) => {
 
   if (isFree || hasActiveSubscription) {
     // Free course or user has active subscription - enroll immediately
-    const enrollmentId = await enrollmentModel.createEnrollment({
-      userId: req.user.id,
-      courseId,
-      status: "approved",
-      enrollmentType: hasActiveSubscription ? "subscription" : "purchase",
-    });
+    try {
+      const enrollmentId = await enrollmentModel.createEnrollment({
+        userId: req.user.id,
+        courseId,
+        status: "approved",
+        enrollmentType: hasActiveSubscription ? "subscription" : "purchase",
+      });
 
-    const enrollment = await enrollmentModel.findEnrollment({
-      userId: req.user.id,
-      courseId,
-    });
+      const enrollment = await enrollmentModel.findEnrollment({
+        userId: req.user.id,
+        courseId,
+      });
 
-    return sendSuccess(
-      res,
-      {
-        enrollmentId,
-        enrollment,
-        nextAction: "Access granted",
-        redirectUrl: `/courses/${courseId}/dashboard`,
-      },
-      hasActiveSubscription ? "Enrolled via active subscription" : "Free course enrolled successfully",
-      201
-    );
+      return sendSuccess(
+        res,
+        {
+          enrollmentId,
+          enrollment,
+          nextAction: "Access granted",
+          redirectUrl: `/courses/${courseId}/dashboard`,
+        },
+        hasActiveSubscription ? "Enrolled via active subscription" : "Free course enrolled successfully",
+        201
+      );
+    } catch (error) {
+      // Handle duplicate enrollment error
+      if (error.message === 'DUPLICATE_ENROLLMENT') {
+        const existing = await enrollmentModel.findEnrollment({
+          userId: req.user.id,
+          courseId,
+        });
+        
+        if (existing && existing.status === "approved") {
+          return sendSuccess(
+            res,
+            {
+              enrollment: existing,
+              nextAction: "Access granted",
+              redirectUrl: `/courses/${courseId}/dashboard`,
+            },
+            "Already enrolled in this course"
+          );
+        }
+      }
+      throw error;
+    }
   }
 
   // Paid course without subscription - redirect to payment

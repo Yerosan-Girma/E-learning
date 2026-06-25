@@ -29,15 +29,27 @@ async function createEnrollment({ userId, courseId, status, enrollmentType }) {
   } catch (error) {
     // If column doesn't exist, try without it (for original schema)
     if (error.code === '42703') { // column does not exist
-      const result = await pool.query(
-        `
-          INSERT INTO enrollments (user_id, course_id, status)
-          VALUES ($1, $2, $3)
-          RETURNING id
-        `,
-        [userId, courseId, status]
-      );
-      return result.rows[0].id;
+      try {
+        const result = await pool.query(
+          `
+            INSERT INTO enrollments (user_id, course_id, status)
+            VALUES ($1, $2, $3)
+            RETURNING id
+          `,
+          [userId, courseId, status]
+        );
+        return result.rows[0].id;
+      } catch (fallbackError) {
+        // Handle duplicate key error
+        if (fallbackError.code === '23505') { // unique violation
+          throw new Error('DUPLICATE_ENROLLMENT');
+        }
+        throw fallbackError;
+      }
+    }
+    // Handle duplicate key error for enhanced schema
+    if (error.code === '23505') { // unique violation
+      throw new Error('DUPLICATE_ENROLLMENT');
     }
     throw error;
   }
