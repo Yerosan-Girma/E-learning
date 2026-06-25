@@ -19,7 +19,8 @@ export default function SiteNavbar() {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const data = await api.listCourses({ limit: 1 });
+        // Fetch all courses to get all categories (without limit)
+        const data = await api.listCourses({ limit: 100 });
         const uniqueCategories = new Set(data.courses?.map((course) => course.category).filter(Boolean));
         const fetchedCategories = Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b));
         if (fetchedCategories.length > 0) {
