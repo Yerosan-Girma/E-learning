@@ -20,32 +20,18 @@ const generateCertificate = asyncHandler(async (req, res) => {
   const existingCertificate = await certificateModel.checkCertificateExists(userId, courseId);
   if (existingCertificate) {
     const certificate = await certificateModel.getCertificateById(existingCertificate.id);
-    return sendSuccess(
-      res,
-      { certificate },
-      "Certificate already generated"
-    );
+    return sendSuccess(res, { certificate }, "Certificate already generated");
   }
 
-  // Check if progress is 100%
-  if (enrollment.progress < 100) {
-    throw new ApiError(400, "You must complete 100% of the course to generate a certificate");
-  }
-
-  // Check if all required quizzes are completed
-  const course = await courseModel.getCourseById(courseId);
-  const quizzes = await quizModel.getQuizzesByCourse(courseId);
-  
-  for (const quiz of quizzes) {
-    const attempts = await quizModel.getQuizAttemptsByUser(quiz.id, userId);
-    const passedAttempt = attempts.find(
-      (attempt) => attempt.score >= quiz.passing_score
-    );
-    
-    if (!passedAttempt) {
+  // Check that student has passed at least one quiz with >= 50%
+  const quizzes = await quizModel.listQuizzesByCourseId(courseId);
+  if (quizzes.length > 0) {
+    const attempts = await quizModel.listAttemptsByUser(userId, { courseId });
+    const hasPassed = attempts.some((a) => Number(a.score) >= 50);
+    if (!hasPassed) {
       throw new ApiError(
         400,
-        `You must complete all required quizzes to generate a certificate. Quiz "${quiz.title}" is not passed.`
+        "You need to score at least 50% on a quiz to earn this certificate."
       );
     }
   }

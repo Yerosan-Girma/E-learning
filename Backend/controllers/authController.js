@@ -4,30 +4,30 @@ const authService = require("../services/authService");
 const userModel = require("../models/userModel");
 
 const register = asyncHandler(async (req, res) => {
-  const { fullName, email, password, role } = req.body;
+  const { fullName, email, password, role, specialization, bio, proposedCourse } = req.body;
 
-  const { user, token } = await authService.registerUser({
+  const result = await authService.registerUser({
     fullName,
     email,
     password,
     role: role || "student",
+    specialization,
+    bio,
+    proposedCourse,
   });
 
-  return sendSuccess(
-    res,
-    {
-      user,
-      token,
-    },
-    "Registration successful",
-    201
-  );
+  // Teacher registration returns pending — no token issued
+  if (result.pending) {
+    return sendSuccess(res, { pending: true }, result.message, 201);
+  }
+
+  return sendSuccess(res, { user: result.user, token: result.token }, "Registration successful", 201);
 });
 
 const login = asyncHandler(async (req, res) => {
-  const { email, password, googleId } = req.body;
+  const { email, password } = req.body;
 
-  const data = await authService.loginUser({ email, password, googleId });
+  const data = await authService.loginUser({ email, password });
   return sendSuccess(res, data, "Login successful");
 });
 

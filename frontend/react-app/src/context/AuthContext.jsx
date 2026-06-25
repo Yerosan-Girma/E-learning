@@ -102,6 +102,32 @@ export function AuthProvider({ children, notify }) {
     return finishAuth(apiUser, token, "Account created successfully.");
   };
 
+  const loginWithToken = async (token) => {
+    try {
+      // Decode JWT payload (no verification — server already validated it)
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      const payload = JSON.parse(jsonPayload);
+
+      const apiUser = {
+        id: payload.id,
+        full_name: payload.full_name || payload.name || payload.email?.split("@")[0],
+        email: payload.email,
+        role: payload.role || "student",
+      };
+
+      return finishAuth(apiUser, token, "Login successful with Google.");
+    } catch (err) {
+      throw new Error("Invalid token from Google login.");
+    }
+  };
+
   const accessLearner = async ({ fullName, email, password }) => {
     if (!fullName || !email || !password) {
       notify?.("Please provide full name, email, and password.", "danger");
@@ -148,6 +174,7 @@ export function AuthProvider({ children, notify }) {
       login,
       signup,
       accessLearner,
+      loginWithToken,
       refreshStudentState,
       logout,
       notify,

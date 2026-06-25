@@ -13,20 +13,23 @@ export default function AdminDashboardPage() {
   const [enrollments, setEnrollments] = useState([]);
   const [users, setUsers] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [pendingTeachers, setPendingTeachers] = useState([]);
 
   async function loadAdminData() {
     setLoading(true);
     try {
-      const [dashboard, enrollmentData, paymentData] = await Promise.all([
+      const [dashboard, enrollmentData, paymentData, teacherData] = await Promise.all([
         api.getDashboard("admin"),
         api.allEnrollments(),
         api.allPayments(),
+        api.listPendingTeachers(),
       ]);
       setSummary(dashboard.summary || null);
       setPayments(paymentData.payments || []);
       setEnrollments(enrollmentData.enrollments || []);
       setUsers(dashboard.users || []);
       setCourses(dashboard.courses || []);
+      setPendingTeachers(teacherData.teachers || []);
     } catch (error) {
       const errorMessage = typeof error.message === 'string' 
         ? error.message 
@@ -68,6 +71,26 @@ export default function AdminDashboardPage() {
       await loadAdminData();
     } catch (error) {
       notify(error.message || "Failed to update payment status", "danger");
+    }
+  };
+
+  const handleApproveTeacher = async (userId) => {
+    try {
+      await api.approveTeacher(userId);
+      notify("Teacher application approved. Account is now active.", "success");
+      await loadAdminData();
+    } catch (error) {
+      notify(error.message || "Failed to approve teacher", "danger");
+    }
+  };
+
+  const handleRejectTeacher = async (userId) => {
+    try {
+      await api.rejectTeacher(userId);
+      notify("Teacher application rejected.", "warning");
+      await loadAdminData();
+    } catch (error) {
+      notify(error.message || "Failed to reject teacher", "danger");
     }
   };
 
@@ -138,6 +161,69 @@ export default function AdminDashboardPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="card border-0 shadow-sm mb-4">
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h5 className="fw-bold mb-0">
+                  Teacher Applications
+                  {pendingTeachers.length > 0 && (
+                    <span className="badge bg-warning text-dark ms-2">{pendingTeachers.length} pending</span>
+                  )}
+                </h5>
+              </div>
+              {pendingTeachers.length === 0 ? (
+                <p className="text-muted mb-0">No pending teacher applications.</p>
+              ) : (
+                <div className="row g-3">
+                  {pendingTeachers.map((teacher) => (
+                    <div className="col-lg-6" key={teacher.id}>
+                      <div className="border rounded p-3 h-100">
+                        <div className="d-flex justify-content-between align-items-start mb-2">
+                          <div>
+                            <h6 className="fw-bold mb-0">{teacher.full_name}</h6>
+                            <small className="text-muted">{teacher.email}</small>
+                          </div>
+                          <span className="badge bg-warning text-dark">Pending</span>
+                        </div>
+                        {teacher.specialization && (
+                          <p className="small mb-1">
+                            <strong>Specialization:</strong> {teacher.specialization}
+                          </p>
+                        )}
+                        {teacher.proposed_course && (
+                          <p className="small mb-1">
+                            <strong>Proposed course:</strong> {teacher.proposed_course}
+                          </p>
+                        )}
+                        {teacher.bio && (
+                          <p className="small text-muted mb-3" style={{ maxHeight: 80, overflow: "hidden" }}>
+                            {teacher.bio}
+                          </p>
+                        )}
+                        <div className="d-flex gap-2 mt-auto">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-success"
+                            onClick={() => handleApproveTeacher(teacher.id)}
+                          >
+                            <i className="fas fa-check me-1" />Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-danger"
+                            onClick={() => handleRejectTeacher(teacher.id)}
+                          >
+                            <i className="fas fa-times me-1" />Reject
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

@@ -29,24 +29,30 @@ async function request(path, { method = "GET", token, body, isFormData = false }
     throw error;
   }
 
-  const payload = await response.json().catch(() => ({}));
+  const payload = await response.json().catch(() => null);
 
-  if (!response.ok || payload.success === false) {
-    const errorMessage = typeof payload.message === 'string' 
-      ? payload.message 
-      : (payload.message ? JSON.stringify(payload.message) : "Request failed");
+  if (!response.ok || payload?.success === false) {
+    const errorMessage =
+      payload && typeof payload.message === "string"
+        ? payload.message
+        : payload && payload.message
+        ? JSON.stringify(payload.message)
+        : response.status === 429
+        ? "Too many requests. Please wait a moment and try again."
+        : "Request failed";
     const error = new Error(errorMessage);
     error.status = response.status;
-    error.details = payload.details || null;
+    error.details = payload?.details || null;
     throw error;
   }
 
-  return payload.data || {};
+  return payload?.data || {};
 }
 
 export const api = {
   baseUrl: API_BASE_URL,
   register: (payload) => request("/auth/register", { method: "POST", body: payload }),
+  registerTeacher: (payload) => request("/auth/register", { method: "POST", body: { ...payload, role: "teacher" } }),
   login: (payload) => request("/auth/login", { method: "POST", body: payload }),
   profile: () => request("/auth/me"),
 
@@ -130,6 +136,9 @@ export const api = {
       method: "PATCH",
       body: { status },
     }),
+  listPendingTeachers: () => request("/users/pending-teachers"),
+  approveTeacher: (userId) => request(`/users/${userId}/approve-teacher`, { method: "PATCH" }),
+  rejectTeacher: (userId) => request(`/users/${userId}/reject-teacher`, { method: "PATCH" }),
 
   // Certificate API
   getMyCertificates: () => request("/certificates/my"),

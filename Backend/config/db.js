@@ -21,18 +21,30 @@ function parseSSLConfig(sslConfig) {
 }
 
 // PostgreSQL connection pool configuration
-const pool = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT || 5432), // PostgreSQL default port
-  user: process.env.DB_USER || "postgres",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "edulearn_db",
-  ssl: parseSSLConfig(process.env.DB_SSL),
-  max: Number(process.env.DB_POOL_MAX || 10), // maximum number of clients in the pool
-  idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT || 30000), // how long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: Number(process.env.DB_POOL_CONNECTION_TIMEOUT || 2000), // how long to wait for a connection
-  application_name: "edulearn-backend"
-});
+// Render / Neon provide a DATABASE_URL; individual vars are used locally
+const pool = new Pool(
+  process.env.DATABASE_URL
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false }, // required by Render/Neon
+        max: Number(process.env.DB_POOL_MAX || 10),
+        idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT || 30000),
+        connectionTimeoutMillis: Number(process.env.DB_POOL_CONNECTION_TIMEOUT || 2000),
+        application_name: "edulearn-backend",
+      }
+    : {
+        host: process.env.DB_HOST || "localhost",
+        port: Number(process.env.DB_PORT || 5432),
+        user: process.env.DB_USER || "postgres",
+        password: process.env.DB_PASSWORD || "",
+        database: process.env.DB_NAME || "edulearn_db",
+        ssl: parseSSLConfig(process.env.DB_SSL),
+        max: Number(process.env.DB_POOL_MAX || 10),
+        idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT || 30000),
+        connectionTimeoutMillis: Number(process.env.DB_POOL_CONNECTION_TIMEOUT || 2000),
+        application_name: "edulearn-backend",
+      }
+);
 
 // PostgreSQL error code mapping for common errors
 const PostgresErrorCodes = {
@@ -99,6 +111,34 @@ async function ensureSchema() {
   // Note: These migrations assume PostgreSQL schema already exists
   // The main schema creation should be done via separate migration scripts
   
+  await runMigration(
+    `
+      DO $$
+      BEGIN
+        -- Extend status to include 'pending' for teacher approval flow
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check;
+        ALTER TABLE users
+        ADD CONSTRAINT users_status_check
+        CHECK (status IN ('active', 'inactive', 'pending'));
+      END $$;
+    `,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+
+  // Add teacher_specialization column for teacher application info
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS specialization TEXT`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS proposed_course TEXT`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+
   // Add level column to courses if it doesn't exist
   await runMigration(
     `

@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: edulearn-backend
+    runtime: node
+    rootDir: .
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: edulearn-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://your-app.vercel.app  # update after Vercel deploy
+      - key: PAYMENT_GATEWAY_MODE
+        value: mock
+
+databases:
+  - name: edulearn-db
+    databaseName: edulearn_db
+    user: edulearn_user
+    plan: free

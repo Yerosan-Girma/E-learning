@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
 import { normalizeCourse, normalizeLesson } from "../utils/courseAdapter";
+import PrintableCertificate from "../components/certificates/PrintableCertificate";
 
 function toQuizAnswers(answerMap) {
   return Object.entries(answerMap).map(([questionId, selectedOption]) => ({
@@ -25,11 +26,12 @@ const TABS = [
   { id: "lessons", label: "Lessons", icon: "fa-play-circle" },
   { id: "resources", label: "Resources", icon: "fa-file-pdf" },
   { id: "quizzes", label: "Quizzes", icon: "fa-list-check" },
+  { id: "certificate", label: "Certificate", icon: "fa-award" },
 ];
 
 export default function LearningPage() {
   const { courseId } = useParams();
-  const { notify, dashboardPath } = useAuth();
+  const { notify, dashboardPath, user } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
@@ -43,6 +45,10 @@ export default function LearningPage() {
   const [quizResult, setQuizResult] = useState(null);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
   const [activeTab, setActiveTab] = useState("lessons");
+  const [certificate, setCertificate] = useState(null);
+  const [certLoading, setCertLoading] = useState(false);
+  const [certGenerating, setCertGenerating] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
 
   async function loadLearningData() {
     setLoading(true);
@@ -166,12 +172,63 @@ export default function LearningPage() {
     try {
       const data = await api.submitQuizAttempt(activeQuiz.quiz.id, toQuizAnswers(quizAnswers));
       setQuizResult(data);
-      notify(`Quiz submitted. Score: ${data.score}%`, "success");
+      if (data.passed) {
+        notify(`Quiz passed with ${data.score}%! 🎉`, "success");
+        // Reload certificate if auto-generated
+        if (data.certificateGenerated) {
+          const certData = await api.getMyCertificates();
+          const found = (certData.certificates || []).find(
+            (c) => String(c.course_id) === String(courseId)
+          );
+          setCertificate(found || null);
+        }
+      } else {
+        notify(`Score: ${data.score}% — need 50% to pass. Try again!`, "warning");
+      }
     } catch (error) {
       notify(error.message || "Quiz submission failed", "danger");
     } finally {
       setSubmittingQuiz(false);
     }
+  };
+
+  // Load existing certificate when the certificate tab is opened
+  useEffect(() => {
+    if (activeTab !== "certificate" || accessMode === "preview_only") return;
+
+    async function loadCertificate() {
+      setCertLoading(true);
+      try {
+        const data = await api.getMyCertificates();
+        const found = (data.certificates || []).find(
+          (c) => String(c.course_id) === String(courseId)
+        );
+        setCertificate(found || null);
+      } catch {
+        setCertificate(null);
+      } finally {
+        setCertLoading(false);
+      }
+    }
+
+    loadCertificate();
+  }, [activeTab, courseId, accessMode]);
+
+  const handleGenerateCertificate = async () => {
+    setCertGenerating(true);
+    try {
+      const data = await api.generateCertificate(courseId);
+      setCertificate(data.certificate);
+      notify("Certificate generated successfully!", "success");
+    } catch (error) {
+      notify(error.message || "Could not generate certificate", "danger");
+    } finally {
+      setCertGenerating(false);
+    }
+  };
+
+  const handlePrintCertificate = () => {
+    setShowCertModal(true);
   };
 
   if (loading) {
@@ -525,8 +582,15 @@ export default function LearningPage() {
                             {quiz.question_count} questions
                           </small>
                           {quiz.latestAttempt && (
-                            <small className="text-success d-block">
-                              Score: {Number(quiz.latestAttempt.score).toFixed(0)}%
+                            <small
+                              className={`d-block ${
+                                Number(quiz.latestAttempt.score) >= 50
+                                  ? "text-success"
+                                  : "text-danger"
+                              }`}
+                            >
+                              Score: {Number(quiz.latestAttempt.score).toFixed(0)}%{" "}
+                              {Number(quiz.latestAttempt.score) >= 50 ? "✓" : "✗"}
                             </small>
                           )}
                         </button>
@@ -544,13 +608,44 @@ export default function LearningPage() {
                 ) : activeQuiz?.quiz ? (
                   <div className="card border-0 shadow-sm">
                     <div className="card-body">
-                      <h4 className="fw-bold mb-2">{activeQuiz.quiz.title}</h4>
+                      <div className="d-flex justify-content-between align-items-start mb-2">
+                        <h4 className="fw-bold mb-0">{activeQuiz.quiz.title}</h4>
+                        <span className="badge bg-info text-dark">Pass: 50%</span>
+                      </div>
                       <p className="text-muted">
                         {activeQuiz.quiz.description || "Complete this quiz to test your knowledge."}
                       </p>
                       <p className="small text-muted mb-4">
-                        Passing score: {Number(activeQuiz.quiz.passing_score).toFixed(0)}%
+                        Score 50% or above to earn your certificate.
                       </p>
+
+                      {/* Show result banner + cert link if already passed */}
+                      {quizResult && quizResult.passed && (
+                        <div className="alert alert-success d-flex align-items-center gap-3 mb-4">
+                          <i className="fas fa-trophy fa-2x text-warning" />
+                          <div className="flex-grow-1">
+                            <strong>You passed with {Number(quizResult.score).toFixed(0)}%!</strong>
+                            <br />
+                            <small>Your certificate is ready.</small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-warning btn-sm fw-semibold"
+                            onClick={() => setActiveTab("certificate")}
+                          >
+                            <i className="fas fa-award me-1" />
+                            View Certificate
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Failed result */}
+                      {quizResult && !quizResult.passed && (
+                        <div className="alert alert-warning mb-4">
+                          <strong>Score: {Number(quizResult.score).toFixed(0)}%</strong> — You need
+                          50% to pass. Scroll down to retake.
+                        </div>
+                      )}
 
                       <form onSubmit={submitQuiz}>
                         {activeQuiz.questions.map((question, index) => (
@@ -584,25 +679,23 @@ export default function LearningPage() {
                           </div>
                         ))}
 
-                        <button type="submit" className="btn btn-primary" disabled={submittingQuiz}>
-                          {submittingQuiz ? "Submitting..." : "Submit Quiz"}
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={submittingQuiz}
+                        >
+                          {submittingQuiz ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                              Submitting…
+                            </>
+                          ) : quizResult ? (
+                            "Retake Quiz"
+                          ) : (
+                            "Submit Quiz"
+                          )}
                         </button>
                       </form>
-
-                      {quizResult && typeof quizResult.score !== "undefined" && (
-                        <div className="alert alert-light border mt-4">
-                          <h6 className="fw-bold mb-2">Latest Result</h6>
-                          <p className="mb-2">
-                            Score: <strong>{Number(quizResult.score).toFixed(2)}%</strong>
-                          </p>
-                          {"passed" in quizResult && (
-                            <p className="mb-0">
-                              {quizResult.passed ? "Passed" : "Not passed yet"} — Correct:{" "}
-                              {quizResult.correctAnswers}/{quizResult.totalQuestions}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -611,8 +704,122 @@ export default function LearningPage() {
               </div>
             </div>
           )}
+
+          {/* ── Certificate Tab ── */}
+          {activeTab === "certificate" && (
+            <div className="row justify-content-center">
+              <div className="col-lg-8">
+                {accessMode === "preview_only" ? (
+                  <div className="alert alert-warning text-center">
+                    <i className="fas fa-lock fa-2x mb-3 d-block" />
+                    Enroll in this course to earn a certificate.
+                  </div>
+                ) : certLoading ? (
+                  <div className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status" />
+                    <p className="mt-3 text-muted">Checking your certificate…</p>
+                  </div>
+                ) : certificate ? (
+                  /* ── Has certificate ── */
+                  <div className="card border-0 shadow-sm text-center">
+                    <div
+                      className="card-header border-0 py-4"
+                      style={{
+                        background: "linear-gradient(135deg, #1a3a6b 0%, #b8972a 100%)",
+                      }}
+                    >
+                      <i className="fas fa-award fa-3x text-white mb-2 d-block" />
+                      <h4 className="text-white fw-bold mb-0">Congratulations!</h4>
+                      <p className="text-white-50 mb-0 small">You earned a certificate</p>
+                    </div>
+                    <div className="card-body p-4">
+                      <h5 className="fw-bold mb-1">{certificate.course_title}</h5>
+                      <p className="text-muted small mb-3">
+                        Issued on{" "}
+                        {new Date(certificate.issue_date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+
+                      <div className="bg-light rounded p-3 mb-4 text-start">
+                        <div className="row g-2 small">
+                          <div className="col-sm-6">
+                            <span className="text-muted">Student:</span>{" "}
+                            <strong>
+                              {certificate.student_name || user?.name || "—"}
+                            </strong>
+                          </div>
+                          {certificate.instructor_name && (
+                            <div className="col-sm-6">
+                              <span className="text-muted">Instructor:</span>{" "}
+                              <strong>{certificate.instructor_name}</strong>
+                            </div>
+                          )}
+                          <div className="col-12">
+                            <span className="text-muted">Certificate No.:</span>{" "}
+                            <code className="small">{certificate.certificate_number}</code>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-lg d-flex align-items-center gap-2 mx-auto"
+                        onClick={() => setShowCertModal(true)}
+                      >
+                        <i className="fas fa-print" />
+                        View &amp; Print Certificate
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* ── No certificate yet ── */
+                  <div className="card border-0 shadow-sm text-center p-5">
+                    <i className="fas fa-award fa-4x text-muted mb-4" />
+                    <h5 className="fw-bold mb-2">Earn Your Certificate</h5>
+                    <p className="text-muted mb-4">
+                      Complete a quiz with a score of <strong>50% or above</strong> to earn your
+                      certificate of completion for <em>{course?.title}</em>.
+                    </p>
+                    {quizzes.length === 0 ? (
+                      <p className="text-muted small">No quizzes available for this course yet.</p>
+                    ) : (
+                      <div className="d-flex flex-column gap-2">
+                        <button
+                          type="button"
+                          className="btn btn-outline-primary mx-auto"
+                          onClick={() => setActiveTab("quizzes")}
+                        >
+                          <i className="fas fa-list-check me-2" />
+                          Go to Quizzes
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-link btn-sm text-muted"
+                          disabled={certGenerating}
+                          onClick={handleGenerateCertificate}
+                        >
+                          {certGenerating ? "Checking…" : "Already passed? Generate certificate"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Printable certificate modal */}
+      {showCertModal && certificate && (
+        <PrintableCertificate
+          certificate={certificate}
+          onClose={() => setShowCertModal(false)}
+        />
+      )}
     </>
   );
 }

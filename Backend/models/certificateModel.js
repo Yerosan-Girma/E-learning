@@ -75,8 +75,14 @@ async function getCertificateByVerificationCode(verificationCode) {
 
 async function getCertificatesByUser(userId) {
   const query = `
-    SELECT c.*, co.title AS course_title, co.thumbnail_url, ins.full_name AS instructor_name
+    SELECT c.*,
+           u.full_name AS student_name,
+           u.email     AS student_email,
+           co.title AS course_title,
+           co.thumbnail_url,
+           ins.full_name AS instructor_name
     FROM certificates c
+    INNER JOIN users u   ON c.user_id = u.id
     INNER JOIN courses co ON c.course_id = co.id
     INNER JOIN users ins ON co.instructor_id = ins.id
     WHERE c.user_id = $1

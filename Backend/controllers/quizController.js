@@ -224,10 +224,10 @@ const submitQuizAttempt = asyncHandler(async (req, res) => {
     answers,
   });
 
-  const passed = score >= Number(quiz.passing_score || 60);
+  const passed = score >= 50; // Certificate requires >= 50%
   let certificateGenerated = false;
 
-  // Auto-generate certificate if conditions are met
+  // Auto-generate certificate if student passes with >= 50%
   if (passed) {
     try {
       const enrollment = await enrollmentModel.findEnrollment({
@@ -235,36 +235,17 @@ const submitQuizAttempt = asyncHandler(async (req, res) => {
         courseId: quiz.course_id,
       });
 
-      if (enrollment && enrollment.status === "approved" && enrollment.progress >= 100) {
-        // Check if all required quizzes are passed
-        const allQuizzes = await quizModel.listQuizzesByCourseId(quiz.course_id);
-        let allQuizzesPassed = true;
-
-        for (const q of allQuizzes) {
-          const attempts = await quizModel.listAttemptsByUser(req.user.id, {
+      if (enrollment && enrollment.status === "approved") {
+        const existingCertificate = await certificateModel.checkCertificateExists(
+          req.user.id,
+          quiz.course_id
+        );
+        if (!existingCertificate) {
+          await certificateModel.createCertificate({
+            userId: req.user.id,
             courseId: quiz.course_id,
           });
-          const passedAttempt = attempts.find(
-            (attempt) => attempt.score >= q.passing_score
-          );
-          if (!passedAttempt) {
-            allQuizzesPassed = false;
-            break;
-          }
-        }
-
-        if (allQuizzesPassed) {
-          const existingCertificate = await certificateModel.checkCertificateExists(
-            req.user.id,
-            quiz.course_id
-          );
-          if (!existingCertificate) {
-            await certificateModel.createCertificate({
-              userId: req.user.id,
-              courseId: quiz.course_id,
-            });
-            certificateGenerated = true;
-          }
+          certificateGenerated = true;
         }
       }
     } catch (error) {

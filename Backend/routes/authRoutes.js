@@ -26,7 +26,7 @@ router.post(
   "/login",
   [
     body("email").isEmail().withMessage("Valid email is required"),
-    body("password").optional(), // Password is optional for students/teachers
+    body("password").notEmpty().withMessage("Password is required"),
   ],
   validate,
   authController.login

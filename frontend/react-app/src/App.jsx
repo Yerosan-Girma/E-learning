@@ -13,8 +13,6 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import SiteFooter from "./components/layout/SiteFooter";
 import SiteNavbar from "./components/layout/SiteNavbar";
 import { useAuth } from "./context/AuthContext";
-import { setAuthUser } from "./utils/storage";
-import { api } from "./services/api";
 import PaymentPage from "./pages/PaymentPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import CourseDetailsPage from "./pages/CourseDetailsPage";
@@ -69,71 +67,43 @@ function DashboardRedirect() {
 
 function GoogleCallback() {
   const [searchParams] = useSearchParams();
-  const { setUser, notify, dashboardPath, refreshStudentState } = useAuth();
+  const { loginWithToken, notify } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = searchParams.get("token");
-    
-    if (token) {
-      const fetchUserAndLogin = async () => {
-        try {
-          // Decode the JWT token to get user info directly
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-          }).join(''));
-          
-          const userPayload = JSON.parse(jsonPayload);
-          
-          console.log("Google OAuth token payload:", userPayload);
-          
-          // Create user object from token payload
-          const user = {
-            id: userPayload.id,
-            name: userPayload.full_name || userPayload.name || userPayload.email?.split('@')[0],
-            email: userPayload.email,
-            role: userPayload.role || 'student',
-            token
-          };
-          
-          console.log("Google OAuth user object:", user);
-          
-          // Set user in storage and context
-          setAuthUser(user);
-          setUser(user);
-          
-          // Refresh student state if needed
-          if (user.role === "student") {
-            await refreshStudentState();
-          }
-          
-          notify("Login successful with Google", "success");
-          
-          // Clean the URL and redirect to dashboard
-          window.history.replaceState({}, document.title, "/auth/callback");
-          navigate(dashboardPath);
-        } catch (error) {
-          console.error("Google OAuth error:", error);
-          notify("Failed to login with Google", "danger");
-          navigate("/login");
-        }
-      };
-      
-      fetchUserAndLogin();
-    } else {
-      // No token in URL, redirect to login
-      navigate("/login");
-    }
-  }, [searchParams, setUser, notify, dashboardPath, refreshStudentState, navigate]);
 
-  return <div className="container py-5 text-center">
-    <div className="spinner-border text-primary" role="status">
-      <span className="visually-hidden">Loading...</span>
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
+    const handleGoogleLogin = async () => {
+      try {
+        const result = await loginWithToken(token);
+        if (result?.success) {
+          navigate(result.redirectTo, { replace: true });
+        } else {
+          navigate("/login", { replace: true });
+        }
+      } catch (error) {
+        console.error("Google OAuth error:", error);
+        notify("Failed to login with Google", "danger");
+        navigate("/login", { replace: true });
+      }
+    };
+
+    handleGoogleLogin();
+  }, []); // run once on mount
+
+  return (
+    <div className="container py-5 text-center">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+      <p className="mt-3">Completing Google login...</p>
     </div>
-    <p className="mt-3">Completing Google login...</p>
-  </div>;
+  );
 }
 
 function AppShell() {

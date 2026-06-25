@@ -1,13 +1,13 @@
 const { pool } = require("../config/db");
 
-async function createUser({ fullName, email, passwordHash, role }) {
+async function createUser({ fullName, email, passwordHash, role, status = "active", specialization = null, bio = null, proposedCourse = null }) {
   const query = `
-    INSERT INTO users (full_name, email, password_hash, role)
-    VALUES ($1, $2, $3, $4)
+    INSERT INTO users (full_name, email, password_hash, role, status, specialization, bio, proposed_course)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id
   `;
 
-  const result = await pool.query(query, [fullName, email, passwordHash, role]);
+  const result = await pool.query(query, [fullName, email, passwordHash, role, status, specialization, bio, proposedCourse]);
   return result.rows[0].id;
 }
 
@@ -84,6 +84,17 @@ async function countUsersByRole() {
   return result.rows;
 }
 
+async function listPendingTeachers() {
+  const result = await pool.query(`
+    SELECT id, full_name, email, role, status, specialization, bio, proposed_course, created_at
+    FROM users
+    WHERE role = 'teacher' AND status = 'pending'
+    ORDER BY created_at ASC
+  `);
+
+  return result.rows;
+}
+
 module.exports = {
   createUser,
   findByEmail,
@@ -92,4 +103,5 @@ module.exports = {
   listUsers,
   updateUserStatus,
   countUsersByRole,
+  listPendingTeachers,
 };
