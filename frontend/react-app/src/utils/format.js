@@ -17,3 +17,10 @@ export function formatNumber(value) {
 export function slugifyCategory(category) {
   return category.toLowerCase().replace(/\s+/g, "-");
 }
+
+export function deslugifyCategory(slug) {
+  return slug
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}

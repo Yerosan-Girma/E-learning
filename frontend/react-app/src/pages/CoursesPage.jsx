@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import CourseCard from "../components/common/CourseCard";
 import { api } from "../services/api";
 import { normalizeCourse } from "../utils/courseAdapter";
-import { slugifyCategory } from "../utils/format";
+import { slugifyCategory, deslugifyCategory } from "../utils/format";
 
 const PAGE_SIZE = 6;
 
@@ -15,6 +15,7 @@ export default function CoursesPage() {
 
   const [loading, setLoading] = useState(true);
   const [courses, setCourses] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedLevel, setSelectedLevel] = useState("all");
@@ -22,6 +23,38 @@ export default function CoursesPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+
+  // Fetch categories independently
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await api.listCourses({ limit: 100 });
+        const uniqueCategories = new Set(data.courses?.map((course) => course.category).filter(Boolean));
+        const fetchedCategories = Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b));
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  const resolvedCategory = useMemo(() => {
+    if (!selectedCategory) return "";
+
+    // Try deslugifying first
+    const deslugified = deslugifyCategory(selectedCategory);
+    if (categories.includes(deslugified)) return deslugified;
+
+    // Then try exact match
+    if (categories.includes(selectedCategory)) return selectedCategory;
+
+    // Finally try slugified match
+    const matchedBySlug = categories.find((category) => slugifyCategory(category) === selectedCategory);
+    if (matchedBySlug) return matchedBySlug;
+
+    return "";
+  }, [categories, selectedCategory]);
 
   useEffect(() => {
     async function loadCourses() {
@@ -33,7 +66,7 @@ export default function CoursesPage() {
         };
         
         if (searchTerm) params.search = searchTerm;
-        if (selectedCategory) params.category = selectedCategory;
+        if (resolvedCategory) params.category = resolvedCategory;
         if (selectedLevel !== 'all') params.level = selectedLevel;
         if (freeOnly) params.maxPrice = 0;
         
@@ -61,26 +94,7 @@ export default function CoursesPage() {
     }
 
     loadCourses();
-  }, [currentPage, searchTerm, selectedCategory, selectedLevel, freeOnly, sortBy]);
-
-  const categories = useMemo(() => {
-    const unique = new Set(courses.map((course) => course.category).filter(Boolean));
-    return Array.from(unique).sort((a, b) => a.localeCompare(b));
-  }, [courses]);
-
-  const resolvedCategory = useMemo(() => {
-    if (!selectedCategory) return "";
-
-    // First try to match by slugified version
-    const matchedBySlug = categories.find((category) => slugifyCategory(category) === selectedCategory);
-    if (matchedBySlug) return matchedBySlug;
-
-    // Then try exact match
-    const matchedExact = categories.find((category) => category === selectedCategory);
-    if (matchedExact) return matchedExact;
-
-    return "";
-  }, [categories, selectedCategory]);
+  }, [currentPage, searchTerm, resolvedCategory, selectedLevel, freeOnly, sortBy]);
 
   // Server-side filtering is now used, so no need for client-side filtering
   const totalPages = pagination.totalPages;
