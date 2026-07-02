@@ -1,4 +1,4 @@
-﻿import { slugifyCategory } from "../utils/format";
+import { slugifyCategory } from "../utils/format";
 
 const baseCourses = [
   {
@@ -90,11 +90,10 @@ const baseCourses = [
     discountPrice: 0,
     image: "/images/courses/course-05.jpg",
     category: "Programming",
-    isFeatured: false,
+    isFeatured: true,
     isFree: true,
     students: 12500,
     shortDescription:
-
       "Start coding with Python syntax, control flow, functions, files, and practical beginner projects.",
   },
   {
@@ -125,12 +124,12 @@ const baseCourses = [
     durationHours: 24,
     lectures: 150,
     level: "Beginner",
-    price: 59.99,
-    discountPrice: 39.99,
+    price: 0,
+    discountPrice: 0,
     image: "/images/courses/course-07.jpg",
     category: "Business",
     isFeatured: false,
-    isFree: false,
+    isFree: true,
     students: 2700,
     shortDescription:
       "Analyze business data and build professional dashboards using Excel formulas, pivots, and charts.",
@@ -144,12 +143,12 @@ const baseCourses = [
     durationHours: 45,
     lectures: 310,
     level: "Advanced",
-    price: 89.99,
-    discountPrice: 69.99,
+    price: 0,
+    discountPrice: 0,
     image: "/images/courses/course-08.jpg",
     category: "Web Development",
     isFeatured: false,
-    isFree: false,
+    isFree: true,
     students: 1900,
     shortDescription:
       "Deep dive into architecture patterns, async flows, state modeling, and performance optimization.",
@@ -163,12 +162,12 @@ const baseCourses = [
     durationHours: 40,
     lectures: 280,
     level: "Intermediate",
-    price: 94.99,
-    discountPrice: 74.99,
+    price: 0,
+    discountPrice: 0,
     image: "/images/courses/course-09.jpg",
     category: "Security",
     isFeatured: false,
-    isFree: false,
+    isFree: true,
     students: 2100,
     shortDescription:
       "Understand threats, defensive security strategy, secure coding basics, and incident response workflows.",
@@ -182,53 +181,15 @@ const baseCourses = [
     durationHours: 50,
     lectures: 350,
     level: "All Levels",
-    price: 84.99,
-    discountPrice: 64.99,
+    price: 0,
+    discountPrice: 0,
     image: "/images/courses/course-10.jpg",
     category: "Design",
     isFeatured: false,
-    isFree: false,
+    isFree: true,
     students: 3100,
     shortDescription:
       "Create polished visual assets with Photoshop, Illustrator, and practical branding workflows.",
-  },
-  {
-    id: 11,
-    title: "Cloud Computing with AWS",
-    instructor: "Sophia Martinez",
-    rating: 4.8,
-    reviews: 367,
-    durationHours: 48,
-    lectures: 320,
-    level: "Intermediate",
-    price: 99.99,
-    discountPrice: 79.99,
-    image: "/images/courses/course-11.jpg",
-    category: "Cloud",
-    isFeatured: false,
-    isFree: false,
-    students: 2900,
-    shortDescription:
-      "Deploy scalable cloud infrastructure on AWS with IAM, EC2, S3, and architecture best practices.",
-  },
-  {
-    id: 12,
-    title: "Project Management Professional (PMP)",
-    instructor: "James Wilson",
-    rating: 4.5,
-    reviews: 512,
-    durationHours: 36,
-    lectures: 240,
-    level: "All Levels",
-    price: 89.99,
-    discountPrice: 69.99,
-    image: "/images/courses/course-12.jpg",
-    category: "Business",
-    isFeatured: false,
-    isFree: false,
-    students: 3400,
-    shortDescription:
-      "Prepare for PMP with project lifecycle, risk, stakeholders, and delivery planning strategies.",
   },
 ];
 

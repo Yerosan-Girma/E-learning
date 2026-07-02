@@ -18,21 +18,19 @@ export default function AdminDashboardPage() {
   async function loadAdminData() {
     setLoading(true);
     try {
-      const [dashboard, enrollmentData, paymentData, teacherData] = await Promise.all([
+      const [dashboard, teacherData] = await Promise.all([
         api.getDashboard("admin"),
-        api.allEnrollments(),
-        api.allPayments(),
         api.listPendingTeachers(),
       ]);
       setSummary(dashboard.summary || null);
-      setPayments(paymentData.payments || []);
-      setEnrollments(enrollmentData.enrollments || []);
-      setUsers(dashboard.users || []);
-      setCourses(dashboard.courses || []);
-      setPendingTeachers(teacherData.teachers || []);
+      setPayments(Array.isArray(dashboard.recentPayments) ? dashboard.recentPayments : []);
+      setEnrollments(Array.isArray(dashboard.recentEnrollments) ? dashboard.recentEnrollments : []);
+      setUsers(Array.isArray(dashboard.users) ? dashboard.users : []);
+      setCourses(Array.isArray(dashboard.courses) ? dashboard.courses : []);
+      setPendingTeachers(Array.isArray(teacherData.teachers) ? teacherData.teachers : []);
     } catch (error) {
-      const errorMessage = typeof error.message === 'string' 
-        ? error.message 
+      const errorMessage = typeof error.message === 'string'
+        ? error.message
         : (error.message ? JSON.stringify(error.message) : "Failed to load admin dashboard");
       notify(errorMessage, "danger");
     } finally {

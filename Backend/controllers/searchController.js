@@ -17,7 +17,10 @@ const searchCourses = asyncHandler(async (req, res) => {
     limit = 20,
   } = req.query;
 
-  const courses = await courseModel.listCourses({
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+
+  const result = await courseModel.listCourses({
     search: q,
     category,
     level,
@@ -27,29 +30,25 @@ const searchCourses = asyncHandler(async (req, res) => {
     maxPrice: maxPrice ? parseFloat(maxPrice) : null,
     sortBy,
     sortOrder,
+    page: pageNum,
+    limit: limitNum,
   });
 
-  // Apply pagination
-  const pageNum = parseInt(page);
-  const limitNum = parseInt(limit);
-  const startIndex = (pageNum - 1) * limitNum;
-  const endIndex = startIndex + limitNum;
-  const paginatedCourses = courses.slice(startIndex, endIndex);
-
   return sendSuccess(res, {
-    courses: paginatedCourses,
-    pagination: {
+    courses: result.courses || [],
+    pagination: result.pagination || {
       page: pageNum,
       limit: limitNum,
-      total: courses.length,
-      totalPages: Math.ceil(courses.length / limitNum),
+      total: 0,
+      totalPages: 0,
     },
   }, "Search results fetched");
 });
 
 const getSearchFilters = asyncHandler(async (req, res) => {
-  // Return available filter options based on existing courses
-  const allCourses = await courseModel.listCourses({ includeUnpublished: false });
+  // Return available filter options based on existing courses. Pass a large limit to retrieve all courses.
+  const result = await courseModel.listCourses({ includeUnpublished: false, limit: 10000 });
+  const allCourses = result.courses || [];
 
   // Extract unique values for filters
   const categories = [...new Set(allCourses.map((c) => c.category))];

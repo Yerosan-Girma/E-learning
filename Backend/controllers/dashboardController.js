@@ -28,12 +28,13 @@ const getStudentDashboard = asyncHandler(async (req, res) => {
 });
 
 const getTeacherDashboard = asyncHandler(async (req, res) => {
-  const [summary, courses, recentPayments] = await Promise.all([
+  const [summary, coursesData, recentPayments] = await Promise.all([
     dashboardModel.getTeacherDashboardSummary(req.user.id),
     courseModel.listCoursesByInstructor(req.user.id),
     paymentModel.listPayments({ status: "completed" }),
   ]);
 
+  const courses = coursesData.courses || [];
   const courseIds = new Set(courses.map((course) => Number(course.id)));
   const filteredPayments = recentPayments.filter((payment) => courseIds.has(Number(payment.course_id)));
 
@@ -49,7 +50,7 @@ const getTeacherDashboard = asyncHandler(async (req, res) => {
 });
 
 const getAdminDashboard = asyncHandler(async (req, res) => {
-  const [summary, payments, enrollments, users, courses] = await Promise.all([
+  const [summary, payments, enrollments, users, coursesData] = await Promise.all([
     dashboardModel.getAdminDashboardSummary(),
     paymentModel.listPayments(),
     enrollmentModel.listAllEnrollments(),
@@ -64,7 +65,7 @@ const getAdminDashboard = asyncHandler(async (req, res) => {
       recentPayments: payments.slice(0, 10),
       recentEnrollments: enrollments.slice(0, 10),
       users,
-      courses,
+      courses: coursesData.courses || [],
     },
     "Admin dashboard loaded"
   );
