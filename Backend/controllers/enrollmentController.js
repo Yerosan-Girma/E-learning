@@ -93,7 +93,7 @@ const enrollInCourse = asyncHandler(async (req, res) => {
         courseId,
       });
 
-      // Send enrollment confirmation email asynchronously
+      // Send enrollment confirmation email to student
       emailService
         .sendEnrollmentEmail({
           studentEmail: req.user.email,
@@ -103,7 +103,20 @@ const enrollInCourse = asyncHandler(async (req, res) => {
           amount: 0,
           isFree: true,
         })
-        .catch((err) => console.error("[Enrollment] Email confirmation error:", err.message));
+        .catch((err) => console.error("[Enrollment] Student email error:", err.message));
+
+      // Send enrollment alert to admin
+      emailService
+        .sendAdminEnrollmentAlert({
+          studentEmail: req.user.email,
+          studentName: req.user.full_name,
+          courseTitle: course.title,
+          courseId: course.id,
+          amount: 0,
+          isFree: true,
+          enrollmentType: hasActiveSubscription ? "subscription" : "free",
+        })
+        .catch((err) => console.error("[Enrollment] Admin notification error:", err.message));
 
       return sendSuccess(
         res,

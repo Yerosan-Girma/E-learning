@@ -19,15 +19,28 @@ router.post(
   asyncHandler(async (req, res) => {
     const { name, email, subject, message, newsletter } = req.body;
 
-    // 1. Send inquiry to Admin's email (admin@edulearn.com)
-    emailService
-      .sendContactFormEmail({ name, email, subject, message })
-      .catch((err) => console.error("[ContactRoutes] Admin contact email error:", err.message));
+    console.log(`[ContactRoutes] Incoming contact inquiry from: ${name} <${email}>, Subject: "${subject || "General"}"`);
 
-    // 2. Send acknowledgment confirmation to the visitor
-    emailService
-      .sendContactAcknowledgmentEmail({ name, email, subject })
-      .catch((err) => console.error("[ContactRoutes] Acknowledgment email error:", err.message));
+    // Await both notifications to ensure reliable delivery before completing the HTTP cycle
+    const results = await Promise.allSettled([
+      emailService.sendContactFormEmail({ name, email, subject, message }),
+      emailService.sendContactAcknowledgmentEmail({ name, email, subject }),
+    ]);
+
+    const adminResult = results[0];
+    const visitorResult = results[1];
+
+    if (adminResult.status === "rejected" || (adminResult.value && !adminResult.value.success)) {
+      console.error("[ContactRoutes] Admin inquiry email delivery warning:", adminResult.reason || adminResult.value?.error);
+    } else {
+      console.log("[ContactRoutes] Admin inquiry email delivered successfully to admin.");
+    }
+
+    if (visitorResult.status === "rejected" || (visitorResult.value && !visitorResult.value.success)) {
+      console.error("[ContactRoutes] Visitor acknowledgment email delivery warning:", visitorResult.reason || visitorResult.value?.error);
+    } else {
+      console.log("[ContactRoutes] Acknowledgment email delivered to visitor.");
+    }
 
     return sendSuccess(
       res,

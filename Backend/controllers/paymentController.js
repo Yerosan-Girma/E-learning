@@ -106,6 +106,18 @@ const initializeCoursePayment = asyncHandler(async (req, res) => {
     })
     .catch((err) => console.error("[Payment] Enrollment email error:", err.message));
 
+  emailService
+    .sendAdminEnrollmentAlert({
+      studentEmail: req.user.email,
+      studentName: req.user.full_name,
+      courseTitle: course.title,
+      courseId: course.id,
+      amount,
+      isFree: false,
+      enrollmentType: "purchase",
+    })
+    .catch((err) => console.error("[Payment] Admin enrollment notification error:", err.message));
+
   return sendSuccess(
     res,
     {
@@ -209,6 +221,15 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
             amount: payment.amount,
             isFree: false,
           });
+          emailService.sendAdminEnrollmentAlert({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+            enrollmentType: "purchase",
+          });
         }
       })
       .catch((err) => console.error("[PaymentStatus] Email notification error:", err.message));
@@ -264,6 +285,15 @@ const handlePaymentWebhook = asyncHandler(async (req, res) => {
             courseId: course.id,
             amount: payment.amount,
             isFree: false,
+          });
+          emailService.sendAdminEnrollmentAlert({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+            enrollmentType: "purchase",
           });
         }
       })

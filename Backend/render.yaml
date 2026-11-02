@@ -29,6 +29,20 @@ services:
         value: https://e-leraning.onrender.com/api/auth/google/callback
       - key: PAYMENT_GATEWAY_MODE
         value: mock
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        value: admin@edulearn.com
+      - key: SMTP_PASS
+        value: your_app_password
+      - key: ADMIN_CONTACT_EMAIL
+        value: admin@edulearn.com
+      - key: EMAIL_FROM
+        value: "EduLearn Platform <admin@edulearn.com>"
 
 databases:
   - name: edulearn-db
