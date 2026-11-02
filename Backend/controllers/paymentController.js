@@ -390,7 +390,12 @@ const verifyChapaPayment = asyncHandler(async (req, res) => {
   // Verify status directly with Chapa
   const chapaVerify = await chapaService.verifyTransaction(txRef);
 
-  if (!chapaVerify.success || (chapaVerify.status !== "success" && chapaVerify.raw?.status !== "success")) {
+  const isSuccess =
+    chapaVerify.success &&
+    (String(chapaVerify.status).toLowerCase() === "success" ||
+      String(chapaVerify.raw?.status).toLowerCase() === "success");
+
+  if (!isSuccess) {
     throw new ApiError(400, chapaVerify.message || "Payment has not been completed on Chapa yet");
   }
 
@@ -460,7 +465,12 @@ const handleChapaWebhook = asyncHandler(async (req, res) => {
 
   try {
     const chapaVerify = await chapaService.verifyTransaction(txRef);
-    if (chapaVerify.success && (chapaVerify.status === "success" || chapaVerify.raw?.status === "success")) {
+    const isSuccess =
+      chapaVerify.success &&
+      (String(chapaVerify.status).toLowerCase() === "success" ||
+        String(chapaVerify.raw?.status).toLowerCase() === "success");
+
+    if (isSuccess) {
       await paymentModel.updatePaymentStatus({
         paymentId: payment.id,
         status: "completed",

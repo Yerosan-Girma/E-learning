@@ -43,6 +43,8 @@ export default function PaymentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentResult, setPaymentResult] = useState(null);
   const [pendingTx, setPendingTx] = useState(null);
+  const [awaitingChapa, setAwaitingChapa] = useState(null);
+  const [manualChecking, setManualChecking] = useState(false);
   const [form, setForm] = useState({
     gateway: "chapa",
     payerName: user?.name || "",
@@ -127,6 +129,70 @@ export default function PaymentPage() {
     return true;
   }, [form, isCardGateway]);
 
+  // Live background polling while awaiting payment on Chapa
+  useEffect(() => {
+    if (!awaitingChapa?.txRef) return;
+    let isCancelled = false;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.verifyChapaPayment(awaitingChapa.txRef);
+        if (isCancelled) return;
+
+        if (res?.data?.status === "completed" || res?.status === "success") {
+          clearInterval(interval);
+          try {
+            localStorage.removeItem("edulearn_pending_chapa_tx");
+          } catch (e) {}
+          await refreshStudentState();
+          setPaymentResult({
+            gateway: "chapa",
+            transactionId: awaitingChapa.txRef,
+            status: "completed",
+          });
+          setAwaitingChapa(null);
+          setStep(3);
+          notify("Payment verified! Welcome to your course.", "success");
+        }
+      } catch (err) {
+        // Still pending on Chapa, keep waiting
+      }
+    }, 2500);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+    };
+  }, [awaitingChapa, refreshStudentState, notify]);
+
+  const handleManualVerify = async () => {
+    if (!awaitingChapa?.txRef) return;
+    setManualChecking(true);
+    try {
+      const res = await api.verifyChapaPayment(awaitingChapa.txRef);
+      if (res?.data?.status === "completed" || res?.status === "success") {
+        try {
+          localStorage.removeItem("edulearn_pending_chapa_tx");
+        } catch (e) {}
+        await refreshStudentState();
+        setPaymentResult({
+          gateway: "chapa",
+          transactionId: awaitingChapa.txRef,
+          status: "completed",
+        });
+        setAwaitingChapa(null);
+        setStep(3);
+        notify("Payment verified! Welcome to your course.", "success");
+      } else {
+        notify("Payment not yet confirmed on Chapa. Please complete the payment first.", "warning");
+      }
+    } catch (err) {
+      notify(err.message || "Payment not yet confirmed. Please complete the payment on Chapa first.", "warning");
+    } finally {
+      setManualChecking(false);
+    }
+  };
+
   const handleConfirmPayment = async () => {
     setSubmitting(true);
     try {
@@ -139,7 +205,7 @@ export default function PaymentPage() {
 
       const payload = data?.data || data;
 
-      // If Chapa provided a hosted checkout link, redirect student immediately
+      // If Chapa provided a hosted checkout link, open it and wait for completion
       if (payload?.checkoutUrl) {
         try {
           localStorage.setItem(
@@ -151,8 +217,17 @@ export default function PaymentPage() {
             })
           );
         } catch (e) {}
-        notify("Redirecting to Chapa secure payment portal...", "info");
-        window.location.href = payload.checkoutUrl;
+
+        const win = window.open(payload.checkoutUrl, "_blank");
+        const isBlocked = !win || win.closed || typeof win.closed === "undefined";
+
+        setAwaitingChapa({
+          txRef: payload.transactionId,
+          checkoutUrl: payload.checkoutUrl,
+          popupBlocked: isBlocked,
+        });
+
+        notify("Chapa payment window opened. Complete your payment to activate access.", "info");
         return;
       }
 
@@ -223,7 +298,7 @@ export default function PaymentPage() {
                 </div>
               </div>
 
-              {pendingTx && (
+              {pendingTx && !awaitingChapa && (
                 <div className="alert alert-warning border-0 rounded-4 shadow-sm mb-4 p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
                   <div>
                     <div className="fw-bold d-flex align-items-center gap-2 text-dark">
@@ -258,7 +333,86 @@ export default function PaymentPage() {
                 </div>
               )}
 
-              {step === 1 && (
+              {awaitingChapa ? (
+                <div className="text-center py-4">
+                  <div className="mb-4 position-relative d-inline-block">
+                    <div className="spinner-grow text-success" style={{ width: "4.5rem", height: "4.5rem", opacity: 0.2 }} />
+                    <div className="position-absolute top-50 start-50 translate-middle">
+                      <i className="fas fa-shield-halved text-success fa-2x" />
+                    </div>
+                  </div>
+
+                  <span className="badge bg-success bg-opacity-10 text-success px-3 py-1.5 rounded-pill small fw-semibold mb-2">
+                    Waiting for Payment Confirmation
+                  </span>
+                  <h3 className="fw-bold mb-2">Complete Payment on Chapa</h3>
+                  <p className="text-muted small mx-auto mb-4" style={{ maxWidth: "480px", lineHeight: "1.7" }}>
+                    We opened Chapa in a separate tab so you don't lose your place. Complete your Telebirr, CBE Birr, or card payment. <strong>This screen will automatically detect your payment and unlock the course!</strong>
+                  </p>
+
+                  {awaitingChapa.popupBlocked && (
+                    <div className="alert alert-warning border-0 rounded-4 shadow-sm mb-4 text-start small">
+                      <div className="fw-bold mb-1">
+                        <i className="fas fa-exclamation-triangle me-1" /> Browser blocked the payment tab?
+                      </div>
+                      <div>Click the button below to open Chapa checkout directly.</div>
+                    </div>
+                  )}
+
+                  <div className="p-3 bg-light rounded-4 text-start small mb-4 border font-monospace">
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className="text-muted">Transaction ID:</span>
+                      <span className="fw-bold text-dark">{awaitingChapa.txRef}</span>
+                    </div>
+                    <div className="d-flex justify-content-between mb-1">
+                      <span className="text-muted">Course:</span>
+                      <span className="fw-semibold text-dark">{course.title}</span>
+                    </div>
+                    <div className="d-flex justify-content-between">
+                      <span className="text-muted">Amount:</span>
+                      <span className="fw-bold text-primary">{formatPrice(course.effectivePrice)}</span>
+                    </div>
+                  </div>
+
+                  <div className="d-flex flex-column gap-2 mb-3">
+                    <button
+                      type="button"
+                      className="btn btn-success btn-lg rounded-pill shadow-sm py-2.5"
+                      onClick={handleManualVerify}
+                      disabled={manualChecking}
+                    >
+                      {manualChecking ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                          Checking payment status with Chapa...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-circle-check me-2" /> I've Finished Paying — Unlock Course Now
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-outline-primary rounded-pill"
+                      onClick={() => window.open(awaitingChapa.checkoutUrl, "_blank")}
+                    >
+                      <i className="fas fa-arrow-up-right-from-square me-2" /> Open Chapa Payment Tab Again
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-link text-muted small"
+                      onClick={() => setAwaitingChapa(null)}
+                    >
+                      Choose another payment method or cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {step === 1 && (
                 <div>
                   <h5 className="fw-bold mb-3">Order Summary</h5>
                   <div className="border rounded-4 p-3.5 mb-4 bg-light">
@@ -423,8 +577,10 @@ export default function PaymentPage() {
                   </div>
                 </div>
               )}
+            </>
+          )}
 
-              {step === 3 && paymentResult && (
+          {step === 3 && paymentResult && (
                 <div className="text-center py-3">
                   <div className="mb-3">
                     <i className="fas fa-check-circle text-success" style={{ fontSize: "4rem" }} />
