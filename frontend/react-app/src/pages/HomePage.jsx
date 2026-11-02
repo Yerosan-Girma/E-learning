@@ -105,14 +105,18 @@ export default function HomePage() {
                 Join thousands of students mastering top skills with expert-led courses, interactive quizzes, and verified graduation certificates.
               </p>
               <div className="d-flex flex-wrap gap-3 mb-4">
-                <Link to="/courses" className="btn btn-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                <Link to="/courses?price=free" className="btn btn-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2 shadow-sm">
                   <i className="fas fa-play-circle" />
                   <span>Start Learning Free</span>
                 </Link>
-                <a href="#courses" className="btn btn-outline-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById("courses")?.scrollIntoView({ behavior: "smooth" })}
+                  className="btn btn-outline-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2"
+                >
                   <i className="fas fa-compass" />
-                  <span>Browse Courses</span>
-                </a>
+                  <span>Explore Featured</span>
+                </button>
               </div>
               <div className="d-flex flex-wrap align-items-center gap-4 text-muted small pt-2">
                 <div className="d-flex align-items-center gap-2">

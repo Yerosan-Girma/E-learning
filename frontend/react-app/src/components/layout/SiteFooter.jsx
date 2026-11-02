@@ -101,9 +101,9 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
-                <a href="#about" className="text-light text-opacity-75 text-decoration-none hover-white">
+                <Link to="/about" className="text-light text-opacity-75 text-decoration-none hover-white">
                   About Us
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -113,14 +113,14 @@ export default function SiteFooter() {
             <h6 className="fw-bold text-uppercase text-white small letter-spacing-1 mb-3">Support</h6>
             <ul className="list-unstyled small d-flex flex-column gap-2 mb-0">
               <li>
-                <a href="#faq" className="text-light text-opacity-75 text-decoration-none hover-white">
-                  FAQ
-                </a>
+                <Link to="/faq" className="text-light text-opacity-75 text-decoration-none hover-white">
+                  FAQ & Help
+                </Link>
               </li>
               <li>
-                <a href="#contact" className="text-light text-opacity-75 text-decoration-none hover-white">
+                <Link to="/contact" className="text-light text-opacity-75 text-decoration-none hover-white">
                   Contact Support
-                </a>
+                </Link>
               </li>
               <li>
                 <span className="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 py-1 px-2">

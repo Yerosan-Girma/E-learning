@@ -210,20 +210,35 @@ export default function SiteNavbar() {
               </ul>
             </li>
 
-            {isHome && (
-              <>
-                <li className="nav-item">
-                  <a className="nav-link" href="#about" onClick={handleNavAction}>
-                    About
-                  </a>
-                </li>
-                <li className="nav-item">
-                  <a className="nav-link" href="#contact" onClick={handleNavAction}>
-                    Contact
-                  </a>
-                </li>
-              </>
-            )}
+            <li className="nav-item">
+              <NavLink
+                to="/about"
+                className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+                onClick={handleNavAction}
+              >
+                About
+              </NavLink>
+            </li>
+
+            <li className="nav-item">
+              <NavLink
+                to="/contact"
+                className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+                onClick={handleNavAction}
+              >
+                Contact
+              </NavLink>
+            </li>
+
+            <li className="nav-item">
+              <NavLink
+                to="/faq"
+                className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
+                onClick={handleNavAction}
+              >
+                FAQ
+              </NavLink>
+            </li>
           </ul>
 
           {/* Right Action Items */}
