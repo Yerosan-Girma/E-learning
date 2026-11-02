@@ -1,18 +1,26 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
 
-const SMTP_USER = (process.env.SMTP_USER || "admin@edulearn.com").trim();
-const SMTP_PASS = (process.env.SMTP_PASS || "your_app_password").replace(/\s+/g, "");
-const ADMIN_EMAIL = (process.env.ADMIN_CONTACT_EMAIL || SMTP_USER || "admin@edulearn.com").trim();
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
+const SMTP_SECURE = process.env.SMTP_SECURE === "true";
+const SMTP_USER = (process.env.SMTP_USER || "").trim();
+const SMTP_PASS = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+const ADMIN_EMAIL = (process.env.ADMIN_CONTACT_EMAIL || SMTP_USER || "").trim();
+const EMAIL_FROM = process.env.EMAIL_FROM || (SMTP_USER ? `"EduLearn Platform" <${SMTP_USER}>` : '"EduLearn Platform" <no-reply@edulearn.com>');
 
 let transporter = null;
 
 function getTransporter() {
   if (transporter) return transporter;
 
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("SMTP credentials not configured. Please set SMTP_USER and SMTP_PASS in Vercel environment variables.");
+  }
+
   transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // TLS via port 587 (supported by Vercel serverless)
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_SECURE,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -25,7 +33,7 @@ function getTransporter() {
   return transporter;
 }
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   // CORS configuration
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -56,7 +64,7 @@ module.exports = async function handler(req, res) {
 
       // 1. Deliver to Admin
       const adminMail = await t.sendMail({
-        from: `"EduLearn Contact Form" <${SMTP_USER}>`,
+        from: EMAIL_FROM,
         to: ADMIN_EMAIL,
         replyTo: senderEmail,
         subject: `📩 [Contact Form] ${subjectLine}`,
@@ -79,10 +87,10 @@ module.exports = async function handler(req, res) {
         `,
       });
 
-      // 2. Deliver Acknowledgment to Visitor if email is valid
+      // 2. Deliver Acknowledgment to Visitor if email is provided
       if (email && email.includes("@")) {
         await t.sendMail({
-          from: `"EduLearn Support" <${SMTP_USER}>`,
+          from: EMAIL_FROM,
           to: email,
           subject: "EduLearn - We Received Your Message",
           html: `
@@ -117,7 +125,7 @@ module.exports = async function handler(req, res) {
     }
 
     const info = await t.sendMail({
-      from: `"EduLearn Platform" <${SMTP_USER}>`,
+      from: EMAIL_FROM,
       to,
       subject,
       html: html || undefined,
@@ -125,11 +133,9 @@ module.exports = async function handler(req, res) {
       replyTo: replyTo || undefined,
     });
 
-    console.log(`[Vercel Relay] Dispatched email to ${to}: ${info.messageId}`);
     return res.status(200).json({ success: true, messageId: info.messageId });
   } catch (error) {
     console.error("[Vercel Relay] Error sending email:", error.message);
     return res.status(500).json({ success: false, error: error.message });
   }
-};
-
+}

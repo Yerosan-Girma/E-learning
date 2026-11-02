@@ -95,13 +95,10 @@ async function loginUser({ email, password }) {
     throw new ApiError(401, "Invalid credentials");
   }
 
-  const ADMIN_EMAILS = [
-    "admin@edulearn.com",
-    "student@edulearn.com",
-    (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim(),
-  ].filter(Boolean);
+  const adminEmailsEnv = (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim();
+  const configuredAdminEmails = adminEmailsEnv.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-  if (ADMIN_EMAILS.includes(user.email.toLowerCase()) && user.role !== "admin") {
+  if (configuredAdminEmails.includes(user.email.toLowerCase()) && user.role !== "admin") {
     await userModel.updateUserRole(user.id, "admin");
     user.role = "admin";
   }
@@ -303,13 +300,10 @@ async function loginWithGoogleToken(tokenPayload) {
       user.email_verified = true;
     }
 
-    const ADMIN_EMAILS = [
-      "admin@edulearn.com",
-      "student@edulearn.com",
-      (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim(),
-    ].filter(Boolean);
+    const adminEmailsEnv = (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim();
+    const configuredAdminEmails = adminEmailsEnv.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean);
 
-    if (ADMIN_EMAILS.includes(email.toLowerCase()) && user.role !== "admin") {
+    if (configuredAdminEmails.includes(email.toLowerCase()) && user.role !== "admin") {
       await userModel.updateUserRole(user.id, "admin");
       user.role = "admin";
     }

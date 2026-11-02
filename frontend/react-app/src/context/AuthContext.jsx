@@ -22,10 +22,7 @@ export function AuthProvider({ children, notify }) {
         .profile()
         .then((res) => {
           if (res?.user) {
-            const serverRole =
-              res.user.email === "admin@edulearn.com" || res.user.email === "student@edulearn.com"
-                ? "admin"
-                : (res.user.role || currentUser.role);
+            const serverRole = res.user.role || currentUser.role;
             const updatedUser = {
               id: res.user.id,
               name: res.user.full_name || currentUser.name,
@@ -70,15 +67,11 @@ export function AuthProvider({ children, notify }) {
   }, [user?.id, user?.role]);
 
   const finishAuth = async (apiUser, token, successMessage = "Login successful.") => {
-    const isAdminEmail =
-      apiUser.email === "admin@edulearn.com" ||
-      apiUser.email === "student@edulearn.com";
-    const resolvedRole = isAdminEmail ? "admin" : (apiUser.role || "student");
     const nextUser = {
       id: apiUser.id,
       name: apiUser.full_name || apiUser.name || "User",
       email: apiUser.email,
-      role: resolvedRole,
+      role: apiUser.role || "student",
       token,
     };
 
@@ -150,7 +143,7 @@ export function AuthProvider({ children, notify }) {
         id: payload.id,
         full_name: payload.full_name || payload.name || payload.email?.split("@")[0],
         email: payload.email,
-        role: (payload.email === "admin@edulearn.com" || payload.email === "student@edulearn.com") ? "admin" : (payload.role || "student"),
+        role: payload.role || "student",
       };
 
       return finishAuth(apiUser, token, "Login successful with Google.");

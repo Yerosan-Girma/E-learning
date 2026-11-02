@@ -36,13 +36,13 @@ services:
       - key: SMTP_SECURE
         value: "false"
       - key: SMTP_USER
-        value: admin@edulearn.com
+        sync: false
       - key: SMTP_PASS
-        value: your_app_password
+        sync: false
       - key: ADMIN_CONTACT_EMAIL
-        value: admin@edulearn.com
+        sync: false
       - key: EMAIL_FROM
-        value: "EduLearn Platform <admin@edulearn.com>"
+        sync: false
 
 databases:
   - name: edulearn-db

@@ -4,10 +4,10 @@ const nodemailer = require("nodemailer");
 const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
 const SMTP_SECURE = process.env.SMTP_SECURE === "true"; // true for 465, false for 587
-const SMTP_USER = (process.env.SMTP_USER || "admin@edulearn.com").trim();
-const SMTP_PASS = (process.env.SMTP_PASS || "your_app_password").replace(/\s+/g, "");
-const ADMIN_EMAIL = (process.env.ADMIN_CONTACT_EMAIL || process.env.SMTP_USER || "admin@edulearn.com").trim();
-const DEFAULT_FROM = process.env.EMAIL_FROM || `"EduLearn Platform" <${SMTP_USER}>`;
+const SMTP_USER = (process.env.SMTP_USER || "").trim();
+const SMTP_PASS = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
+const ADMIN_EMAIL = (process.env.ADMIN_CONTACT_EMAIL || SMTP_USER || "").trim();
+const DEFAULT_FROM = process.env.EMAIL_FROM || (SMTP_USER ? `"EduLearn Platform" <${SMTP_USER}>` : '"EduLearn Platform" <no-reply@edulearn.com>');
 
 // Create reusable transporter
 let transporter = null;

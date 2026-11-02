@@ -8,8 +8,8 @@ require("dotenv").config({ path: require("path").join(__dirname, "../.env") });
 const bcrypt = require("bcryptjs");
 const { Pool } = require("pg");
 
-const ADMIN_EMAIL = "admin@edulearn.com";
-const NEW_PASSWORD = "ChangeMe123!";
+const ADMIN_EMAIL = process.env.ADMIN_CONTACT_EMAIL || "admin@edulearn.com";
+const NEW_PASSWORD = process.env.ADMIN_DEFAULT_PASSWORD || "ChangeMe123!";
 
 const pool = new Pool({
   host: process.env.DB_HOST || "localhost",

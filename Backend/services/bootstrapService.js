@@ -15,7 +15,7 @@ const DEMO_USERS = [
   },
   {
     fullName: "Admin User",
-    email: "admin@edulearn.com",
+    email: process.env.ADMIN_CONTACT_EMAIL || "admin@edulearn.com",
     passwordHash: "$2a$10$/R21udsi2etdjLd13b10qub5KvenbwssHBbVZTE7UZfpPjnDtWpRq",
     role: "admin",
   },
