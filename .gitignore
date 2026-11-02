@@ -11,6 +11,14 @@ desktop.ini
 *.swo
 *~
 
+# AI Assistants
+.claude/
+.cursor/
+.qodo/
+.agents/
+.ai/
+.devin/
+
 # Logs
 *.log
 
