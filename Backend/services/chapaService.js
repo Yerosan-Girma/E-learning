@@ -53,6 +53,10 @@ async function initializeTransaction({
     callback_url: callbackUrl || undefined,
     "customization[title]": title,
     "customization[description]": description,
+    meta: {
+      hide_receipt: "true",
+    },
+    "meta[hide_receipt]": "true",
   };
 
   if (phoneNumber && String(phoneNumber).trim().length >= 9) {
@@ -127,3 +131,4 @@ module.exports = {
   initializeTransaction,
   verifyTransaction,
 };
+

@@ -8,12 +8,61 @@ const quizModel = require("../models/quizModel");
 const userModel = require("../models/userModel");
 
 const getStudentDashboard = asyncHandler(async (req, res) => {
-  const [summary, enrollments, payments, quizAttempts] = await Promise.all([
+  let [summary, enrollments, payments, quizAttempts] = await Promise.all([
     dashboardModel.getStudentDashboardSummary(req.user.id),
     enrollmentModel.listEnrollmentsByUser(req.user.id),
     paymentModel.listPayments({ userId: req.user.id }),
     quizModel.listAttemptsByUser(req.user.id),
   ]);
+
+  // Auto-verify any pending Chapa payments if the student returns to dashboard
+  const pendingChapa = payments.filter((p) => p.status === "pending" && p.gateway === "chapa");
+  if (pendingChapa.length > 0) {
+    try {
+      const chapaService = require("../services/chapaService");
+      if (chapaService.isChapaConfigured()) {
+        let changed = false;
+        for (const p of pendingChapa) {
+          const verify = await chapaService.verifyTransaction(p.transaction_id);
+          if (verify.success && (verify.status === "SUCCESS" || verify.status === "success")) {
+            await paymentModel.updatePaymentStatus({
+              paymentId: p.id,
+              status: "completed",
+              transactionId: p.transaction_id,
+            });
+
+            const existingEnroll = await enrollmentModel.findEnrollment({
+              userId: req.user.id,
+              courseId: p.course_id,
+            });
+            if (!existingEnroll) {
+              await enrollmentModel.createEnrollment({
+                userId: req.user.id,
+                courseId: p.course_id,
+                status: "approved",
+              });
+            } else if (existingEnroll.status !== "approved") {
+              await enrollmentModel.updateEnrollment({
+                enrollmentId: existingEnroll.id,
+                status: "approved",
+              });
+            }
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          [summary, enrollments, payments] = await Promise.all([
+            dashboardModel.getStudentDashboardSummary(req.user.id),
+            enrollmentModel.listEnrollmentsByUser(req.user.id),
+            paymentModel.listPayments({ userId: req.user.id }),
+          ]);
+        }
+      }
+    } catch (err) {
+      console.error("[Dashboard] Auto-verify pending Chapa error:", err.message);
+    }
+  }
 
   return sendSuccess(
     res,

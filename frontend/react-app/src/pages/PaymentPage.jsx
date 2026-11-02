@@ -42,6 +42,7 @@ export default function PaymentPage() {
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [paymentResult, setPaymentResult] = useState(null);
+  const [pendingTx, setPendingTx] = useState(null);
   const [form, setForm] = useState({
     gateway: "chapa",
     payerName: user?.name || "",
@@ -51,6 +52,18 @@ export default function PaymentPage() {
     cardExpiry: "",
     cardCvc: "",
   });
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("edulearn_pending_chapa_tx");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.txRef && (String(parsed.courseId) === String(courseId) || !parsed.courseId)) {
+          setPendingTx(parsed);
+        }
+      }
+    } catch (e) {}
+  }, [courseId]);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -128,6 +141,16 @@ export default function PaymentPage() {
 
       // If Chapa provided a hosted checkout link, redirect student immediately
       if (payload?.checkoutUrl) {
+        try {
+          localStorage.setItem(
+            "edulearn_pending_chapa_tx",
+            JSON.stringify({
+              txRef: payload.transactionId,
+              courseId,
+              time: Date.now(),
+            })
+          );
+        } catch (e) {}
         notify("Redirecting to Chapa secure payment portal...", "info");
         window.location.href = payload.checkoutUrl;
         return;
@@ -199,6 +222,41 @@ export default function PaymentPage() {
                   ))}
                 </div>
               </div>
+
+              {pendingTx && (
+                <div className="alert alert-warning border-0 rounded-4 shadow-sm mb-4 p-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                  <div>
+                    <div className="fw-bold d-flex align-items-center gap-2 text-dark">
+                      <i className="fas fa-receipt text-warning fa-lg" />
+                      <span>Already completed payment on Chapa?</span>
+                    </div>
+                    <small className="text-muted d-block mt-0.5">
+                      If you finished paying and remained on Chapa's receipt page, verify now to unlock access.
+                    </small>
+                  </div>
+                  <div className="d-flex gap-2">
+                    <Link
+                      to={`/payment/verify?tx_ref=${encodeURIComponent(pendingTx.txRef)}&course_id=${encodeURIComponent(courseId)}`}
+                      className="btn btn-warning btn-sm rounded-pill px-3 fw-bold text-dark shadow-sm"
+                    >
+                      <i className="fas fa-check-double me-1" /> Verify & Unlock
+                    </Link>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary btn-sm rounded-pill px-2.5"
+                      onClick={() => {
+                        try {
+                          localStorage.removeItem("edulearn_pending_chapa_tx");
+                        } catch (e) {}
+                        setPendingTx(null);
+                      }}
+                      title="Dismiss notice"
+                    >
+                      <i className="fas fa-times" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {step === 1 && (
                 <div>

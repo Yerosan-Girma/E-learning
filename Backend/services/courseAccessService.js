@@ -53,20 +53,57 @@ async function getCourseAccessState({ user, course }) {
     userId: user.id,
     courseId,
   });
-  const latestPayment = free
+  let latestPayment = free
     ? null
     : await paymentModel.findLatestPaymentByUserAndCourse({
         userId: user.id,
         courseId,
       });
 
+  let resolvedEnrollment = enrollment;
+
+  // Auto-verify pending Chapa payments if user visits the course after paying
+  if (!free && latestPayment && latestPayment.status === "pending" && latestPayment.gateway === "chapa") {
+    try {
+      const chapaService = require("./chapaService");
+      if (chapaService.isChapaConfigured()) {
+        const verify = await chapaService.verifyTransaction(latestPayment.transaction_id);
+        if (verify.success && (verify.status === "SUCCESS" || verify.status === "success")) {
+          await paymentModel.updatePaymentStatus({
+            paymentId: latestPayment.id,
+            status: "completed",
+            transactionId: latestPayment.transaction_id,
+          });
+          latestPayment.status = "completed";
+
+          if (!resolvedEnrollment) {
+            await enrollmentModel.createEnrollment({
+              userId: user.id,
+              courseId,
+              status: "approved",
+            });
+            resolvedEnrollment = { status: "approved" };
+          } else if (resolvedEnrollment.status !== "approved") {
+            await enrollmentModel.updateEnrollment({
+              enrollmentId: resolvedEnrollment.id,
+              status: "approved",
+            });
+            resolvedEnrollment.status = "approved";
+          }
+        }
+      }
+    } catch (e) {
+      console.error("[CourseAccess] Auto-verify chapa error:", e.message);
+    }
+  }
+
   return {
     isFree: free,
     effectivePrice: price,
     isOwner: false,
-    enrollment,
+    enrollment: resolvedEnrollment,
     latestPayment,
-    hasAccess: Boolean(enrollment && enrollment.status === "approved"),
+    hasAccess: Boolean(resolvedEnrollment && resolvedEnrollment.status === "approved"),
     requiresPayment: !free,
   };
 }

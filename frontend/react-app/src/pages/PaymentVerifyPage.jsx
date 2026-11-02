@@ -32,6 +32,9 @@ export default function PaymentVerifyPage() {
 
         if (response?.data?.status === "completed" || response?.data?.courseId) {
           setSuccess(true);
+          try {
+            localStorage.removeItem("edulearn_pending_chapa_tx");
+          } catch (e) {}
           const resolvedCourseId = response.data.courseId || initialCourseId;
           setCourseId(resolvedCourseId);
           await refreshStudentState();
@@ -161,3 +164,4 @@ export default function PaymentVerifyPage() {
     </div>
   );
 }
+
