@@ -32,6 +32,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # Secrets — never commit real .env
+.env
+.env.*
+*.env
+**/.env
 Backend/.env
 frontend/react-app/.env
 frontend/react-app/.env.production
