@@ -144,8 +144,9 @@ async function listCourses({
   }
 
   if (category) {
-    query += ` AND c.category = $${paramIndex++}`;
+    query += ` AND (LOWER(TRIM(c.category)) = LOWER(TRIM($${paramIndex})) OR LOWER(REPLACE(c.category, ' ', '-')) = LOWER(TRIM($${paramIndex})))`;
     values.push(category);
+    paramIndex++;
   }
 
   if (instructorId) {
@@ -209,8 +210,9 @@ async function listCourses({
   }
 
   if (category) {
-    countQuery += ` AND c.category = $${countParamIndex++}`;
+    countQuery += ` AND (LOWER(TRIM(c.category)) = LOWER(TRIM($${countParamIndex})) OR LOWER(REPLACE(c.category, ' ', '-')) = LOWER(TRIM($${countParamIndex})))`;
     countValues.push(category);
+    countParamIndex++;
   }
 
   if (instructorId) {
