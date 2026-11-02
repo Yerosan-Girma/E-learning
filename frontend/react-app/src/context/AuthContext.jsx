@@ -7,12 +7,39 @@ const AuthContext = createContext(null);
 function roleToDashboardPath(role, studentHasEnrollments) {
   if (role === "admin") return "/dashboard/admin";
   if (role === "teacher") return "/dashboard/teacher";
-  return studentHasEnrollments === false ? "/courses" : "/dashboard/student";
+  return "/dashboard/student";
 }
 
 export function AuthProvider({ children, notify }) {
   const [user, setUser] = useState(() => getAuthUser());
   const [studentHasEnrollments, setStudentHasEnrollments] = useState(null);
+
+  // Refresh user role and profile from server on mount
+  useEffect(() => {
+    const currentUser = getAuthUser();
+    if (currentUser?.token) {
+      api
+        .profile()
+        .then((res) => {
+          if (res?.user) {
+            const serverRole =
+              res.user.email === "admin@edulearn.com" || res.user.email === "student@edulearn.com"
+                ? "admin"
+                : (res.user.role || currentUser.role);
+            const updatedUser = {
+              id: res.user.id,
+              name: res.user.full_name || currentUser.name,
+              email: res.user.email,
+              role: serverRole,
+              token: currentUser.token,
+            };
+            setAuthUser(updatedUser);
+            setUser(updatedUser);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const refreshStudentState = async () => {
     const currentUser = getAuthUser();
@@ -43,11 +70,15 @@ export function AuthProvider({ children, notify }) {
   }, [user?.id, user?.role]);
 
   const finishAuth = async (apiUser, token, successMessage = "Login successful.") => {
+    const isAdminEmail =
+      apiUser.email === "admin@edulearn.com" ||
+      apiUser.email === "student@edulearn.com";
+    const resolvedRole = isAdminEmail ? "admin" : (apiUser.role || "student");
     const nextUser = {
       id: apiUser.id,
-      name: apiUser.full_name,
+      name: apiUser.full_name || apiUser.name || "User",
       email: apiUser.email,
-      role: apiUser.role,
+      role: resolvedRole,
       token,
     };
 
@@ -119,7 +150,7 @@ export function AuthProvider({ children, notify }) {
         id: payload.id,
         full_name: payload.full_name || payload.name || payload.email?.split("@")[0],
         email: payload.email,
-        role: payload.role || "student",
+        role: (payload.email === "admin@edulearn.com" || payload.email === "student@edulearn.com") ? "admin" : (payload.role || "student"),
       };
 
       return finishAuth(apiUser, token, "Login successful with Google.");

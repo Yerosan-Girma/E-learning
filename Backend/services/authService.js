@@ -95,6 +95,17 @@ async function loginUser({ email, password }) {
     throw new ApiError(401, "Invalid credentials");
   }
 
+  const ADMIN_EMAILS = [
+    "admin@edulearn.com",
+    "student@edulearn.com",
+    (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim(),
+  ].filter(Boolean);
+
+  if (ADMIN_EMAILS.includes(user.email.toLowerCase()) && user.role !== "admin") {
+    await userModel.updateUserRole(user.id, "admin");
+    user.role = "admin";
+  }
+
   const safeUser = {
     id: user.id,
     full_name: user.full_name,
@@ -290,6 +301,17 @@ async function loginWithGoogleToken(tokenPayload) {
     if (!user.email_verified) {
       await userModel.markEmailVerified(user.id);
       user.email_verified = true;
+    }
+
+    const ADMIN_EMAILS = [
+      "admin@edulearn.com",
+      "student@edulearn.com",
+      (process.env.ADMIN_CONTACT_EMAIL || "").toLowerCase().trim(),
+    ].filter(Boolean);
+
+    if (ADMIN_EMAILS.includes(email.toLowerCase()) && user.role !== "admin") {
+      await userModel.updateUserRole(user.id, "admin");
+      user.role = "admin";
     }
   }
 

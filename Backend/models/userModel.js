@@ -143,6 +143,14 @@ async function updatePassword(userId, passwordHash) {
   return result.rowCount > 0;
 }
 
+async function updateUserRole(userId, role) {
+  const result = await pool.query(
+    "UPDATE users SET role = $1 WHERE id = $2 RETURNING id, role",
+    [role, userId]
+  );
+  return result.rowCount > 0;
+}
+
 module.exports = {
   createUser,
   findByEmail,
@@ -150,6 +158,7 @@ module.exports = {
   listUsersByRole,
   listUsers,
   updateUserStatus,
+  updateUserRole,
   countUsersByRole,
   listPendingTeachers,
   setVerificationToken,

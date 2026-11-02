@@ -294,11 +294,26 @@ export default function SiteNavbar() {
                       <div className="fw-bold text-dark text-truncate">{userName}</div>
                       <div className="small text-muted text-truncate">{user?.email}</div>
                     </li>
-                    <li>
-                      <Link className="dropdown-item py-2 mt-1" to={dashboardPath} onClick={handleNavAction}>
-                        <i className="fas fa-gauge text-primary me-2" /> My Dashboard
-                      </Link>
-                    </li>
+                    {user?.role === "admin" ? (
+                      <>
+                        <li>
+                          <Link className="dropdown-item py-2 fw-semibold text-danger" to="/dashboard/admin" onClick={handleNavAction}>
+                            <i className="fas fa-shield-halved me-2" /> Admin Dashboard
+                          </Link>
+                        </li>
+                        <li>
+                          <Link className="dropdown-item py-2" to="/dashboard/student" onClick={handleNavAction}>
+                            <i className="fas fa-graduation-cap text-primary me-2" /> Student View
+                          </Link>
+                        </li>
+                      </>
+                    ) : (
+                      <li>
+                        <Link className="dropdown-item py-2 mt-1" to={dashboardPath} onClick={handleNavAction}>
+                          <i className="fas fa-gauge text-primary me-2" /> My Dashboard
+                        </Link>
+                      </li>
+                    )}
                     <li>
                       <Link className="dropdown-item py-2" to="/courses" onClick={handleNavAction}>
                         <i className="fas fa-compass text-secondary me-2" /> Browse Catalog
@@ -324,13 +339,32 @@ export default function SiteNavbar() {
 
                 {/* Mobile Direct Buttons */}
                 <div className="d-flex flex-column gap-2 w-100 d-lg-none">
-                  <Link
-                    to={dashboardPath}
-                    className="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2"
-                    onClick={handleNavAction}
-                  >
-                    <i className="fas fa-gauge" /> My Dashboard
-                  </Link>
+                  {user?.role === "admin" ? (
+                    <>
+                      <Link
+                        to="/dashboard/admin"
+                        className="btn btn-danger text-white d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleNavAction}
+                      >
+                        <i className="fas fa-shield-halved" /> Admin Dashboard
+                      </Link>
+                      <Link
+                        to="/dashboard/student"
+                        className="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleNavAction}
+                      >
+                        <i className="fas fa-graduation-cap" /> Student View
+                      </Link>
+                    </>
+                  ) : (
+                    <Link
+                      to={dashboardPath}
+                      className="btn btn-outline-primary d-flex align-items-center justify-content-center gap-2"
+                      onClick={handleNavAction}
+                    >
+                      <i className="fas fa-gauge" /> My Dashboard
+                    </Link>
+                  )}
                   <button
                     className="btn btn-outline-danger d-flex align-items-center justify-content-center gap-2"
                     type="button"
