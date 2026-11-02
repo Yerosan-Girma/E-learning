@@ -395,3 +395,167 @@
   padding: 0.85rem 1rem;
   margin-bottom: 1rem;
 }
+
+/* ========================================================
+   Modern Feature Pillar Cards (About & Home Pages)
+   ======================================================== */
+.feature-pillar-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 18px;
+  padding: 1.75rem 1.5rem;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.feature-pillar-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: transparent;
+  transition: all 0.35s ease;
+}
+
+.feature-pillar-card.card-blue::before {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+}
+.feature-pillar-card.card-green::before {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+.feature-pillar-card.card-amber::before {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+}
+.feature-pillar-card.card-purple::before {
+  background: linear-gradient(90deg, #8b5cf6, #a78bfa);
+}
+
+.feature-pillar-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(37, 99, 235, 0.28);
+  box-shadow: 0 20px 32px -10px rgba(37, 99, 235, 0.12), 0 8px 16px rgba(15, 23, 42, 0.04);
+}
+
+.feature-pillar-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.feature-pillar-card:hover .feature-pillar-icon {
+  transform: scale(1.08) rotate(3deg);
+}
+
+.feature-pillar-icon.icon-blue {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12) 0%, rgba(59, 130, 246, 0.04) 100%);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+}
+
+.feature-pillar-icon.icon-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.04) 100%);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.feature-pillar-icon.icon-amber {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.04) 100%);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.feature-pillar-icon.icon-purple {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(124, 58, 237, 0.04) 100%);
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.feature-pillar-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.65rem;
+  border-radius: 9999px;
+  line-height: 1;
+}
+
+.feature-pillar-badge.badge-blue {
+  background: rgba(37, 99, 235, 0.08);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.feature-pillar-badge.badge-green {
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.15);
+}
+
+.feature-pillar-badge.badge-amber {
+  background: rgba(245, 158, 11, 0.08);
+  color: #d97706;
+  border: 1px solid rgba(245, 158, 11, 0.15);
+}
+
+.feature-pillar-badge.badge-purple {
+  background: rgba(139, 92, 246, 0.08);
+  color: #7c3aed;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+}
+
+.feature-pillar-list {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0 0;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 0.85rem;
+}
+
+.feature-pillar-list li {
+  font-size: 0.825rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.feature-pillar-list li:last-child {
+  margin-bottom: 0;
+}
+
+.feature-pillar-list li i {
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.feature-pillar-card .arrow-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #2563eb;
+  margin-top: auto;
+  padding-top: 1rem;
+  text-decoration: none;
+  transition: gap 0.2s ease;
+}
+
+.feature-pillar-card:hover .arrow-link {
+  gap: 0.65rem;
+}

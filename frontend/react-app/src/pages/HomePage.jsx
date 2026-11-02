@@ -248,7 +248,7 @@ export default function HomePage() {
             </div>
 
             <div className="col-lg-6">
-              <h3 className="fw-bold mb-4">Our Mission: Democratize Quality Education</h3>
+              <h3 className="fw-bold mb-4">Our Mission: Modernizing Online Education</h3>
               <p className="mb-4">
                 EduLearn was founded in 2020 with a simple vision: make high-quality education accessible to everyone, everywhere.
               </p>

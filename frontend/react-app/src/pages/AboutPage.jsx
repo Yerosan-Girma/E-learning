@@ -11,7 +11,7 @@ export default function AboutPage() {
               About EduLearn
             </span>
             <h1 className="display-4 fw-bold mb-3 tracking-tight">
-              Democratizing Quality Education for Everyone, <span className="text-primary">Everywhere</span>
+              Modernizing Online Education for Everyone, <span className="text-primary">Everywhere</span>
             </h1>
             <p className="lead text-muted mb-4 fs-5" style={{ lineHeight: "1.7" }}>
               Founded in 2020, EduLearn is on a mission to bridge the global skills gap by providing world-class, accessible, and verified online education for ambitious learners worldwide.
@@ -69,58 +69,118 @@ export default function AboutPage() {
 
           <div className="row g-4">
             <div className="col-md-6 col-lg-3">
-              <div className="card h-100 border rounded-4 shadow-sm p-3 bg-white">
-                <div className="card-body">
-                  <div className="stat-icon-wrapper bg-primary bg-opacity-10 text-primary mb-3">
+              <div className="feature-pillar-card card-blue">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="feature-pillar-icon icon-blue">
                     <i className="fas fa-chalkboard-user" />
                   </div>
-                  <h5 className="fw-bold mb-2">Expert Instructors</h5>
-                  <p className="text-muted small mb-0">
-                    Learn directly from industry leaders and certified educators who bring real-world practice to every lesson.
-                  </p>
+                  <span className="feature-pillar-badge badge-blue">Expert Mentors</span>
                 </div>
+                <h5 className="fw-bold mb-2 text-dark">Expert Instructors</h5>
+                <p className="text-muted small mb-0" style={{ lineHeight: "1.6" }}>
+                  Learn directly from industry leaders and certified educators who bring real-world practice to every lesson.
+                </p>
+                <ul className="feature-pillar-list">
+                  <li>
+                    <i className="fas fa-circle-check text-primary" />
+                    <span>Vetted industry specialists</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-circle-check text-primary" />
+                    <span>Real-world case studies</span>
+                  </li>
+                </ul>
+                <Link to="/courses" className="arrow-link">
+                  <span>Explore Courses</span>
+                  <i className="fas fa-arrow-right fa-xs" />
+                </Link>
               </div>
             </div>
 
             <div className="col-md-6 col-lg-3">
-              <div className="card h-100 border rounded-4 shadow-sm p-3 bg-white">
-                <div className="card-body">
-                  <div className="stat-icon-wrapper bg-success bg-opacity-10 text-success mb-3">
+              <div className="feature-pillar-card card-green">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="feature-pillar-icon icon-green">
                     <i className="fas fa-clock-rotate-left" />
                   </div>
-                  <h5 className="fw-bold mb-2">Self-Paced Learning</h5>
-                  <p className="text-muted small mb-0">
-                    Study anytime, anywhere, on any device. Your progress is saved automatically across all your devices.
-                  </p>
+                  <span className="feature-pillar-badge badge-green">Flexible 24/7</span>
                 </div>
+                <h5 className="fw-bold mb-2 text-dark">Self-Paced Learning</h5>
+                <p className="text-muted small mb-0" style={{ lineHeight: "1.6" }}>
+                  Study anytime, anywhere, on any device. Your active progress syncs automatically across all your devices.
+                </p>
+                <ul className="feature-pillar-list">
+                  <li>
+                    <i className="fas fa-circle-check text-success" />
+                    <span>Lifetime course access</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-circle-check text-success" />
+                    <span>Seamless multi-device sync</span>
+                  </li>
+                </ul>
+                <Link to="/courses" className="arrow-link text-success">
+                  <span>Start Learning</span>
+                  <i className="fas fa-arrow-right fa-xs" />
+                </Link>
               </div>
             </div>
 
             <div className="col-md-6 col-lg-3">
-              <div className="card h-100 border rounded-4 shadow-sm p-3 bg-white">
-                <div className="card-body">
-                  <div className="stat-icon-wrapper bg-warning bg-opacity-10 text-warning mb-3">
+              <div className="feature-pillar-card card-amber">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="feature-pillar-icon icon-amber">
                     <i className="fas fa-list-check" />
                   </div>
-                  <h5 className="fw-bold mb-2">Hands-On Practice</h5>
-                  <p className="text-muted small mb-0">
-                    Reinforce your understanding with interactive quizzes, practice questions, and downloadable resources.
-                  </p>
+                  <span className="feature-pillar-badge badge-amber">Interactive</span>
                 </div>
+                <h5 className="fw-bold mb-2 text-dark">Hands-On Practice</h5>
+                <p className="text-muted small mb-0" style={{ lineHeight: "1.6" }}>
+                  Reinforce your understanding with interactive quizzes, practice questions, and downloadable resources.
+                </p>
+                <ul className="feature-pillar-list">
+                  <li>
+                    <i className="fas fa-circle-check text-warning" />
+                    <span>Interactive chapter quizzes</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-circle-check text-warning" />
+                    <span>Curated downloadable assets</span>
+                  </li>
+                </ul>
+                <Link to="/courses" className="arrow-link text-warning">
+                  <span>Practice Skills</span>
+                  <i className="fas fa-arrow-right fa-xs" />
+                </Link>
               </div>
             </div>
 
             <div className="col-md-6 col-lg-3">
-              <div className="card h-100 border rounded-4 shadow-sm p-3 bg-white">
-                <div className="card-body">
-                  <div className="stat-icon-wrapper bg-info bg-opacity-10 text-info mb-3">
+              <div className="feature-pillar-card card-purple">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <div className="feature-pillar-icon icon-purple">
                     <i className="fas fa-award" />
                   </div>
-                  <h5 className="fw-bold mb-2">Verified Certificates</h5>
-                  <p className="text-muted small mb-0">
-                    Earn verifiable digital certificates to share on LinkedIn, resumes, and with prospective employers.
-                  </p>
+                  <span className="feature-pillar-badge badge-purple">Accredited</span>
                 </div>
+                <h5 className="fw-bold mb-2 text-dark">Verified Certificates</h5>
+                <p className="text-muted small mb-0" style={{ lineHeight: "1.6" }}>
+                  Earn verifiable digital certificates to share on LinkedIn, resumes, and with prospective employers.
+                </p>
+                <ul className="feature-pillar-list">
+                  <li>
+                    <i className="fas fa-circle-check text-purple" style={{ color: "#7c3aed" }} />
+                    <span>Unique verification link & ID</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-circle-check text-purple" style={{ color: "#7c3aed" }} />
+                    <span>1-Click LinkedIn credential</span>
+                  </li>
+                </ul>
+                <Link to="/login?tab=signup" className="arrow-link" style={{ color: "#7c3aed" }}>
+                  <span>Get Certified</span>
+                  <i className="fas fa-arrow-right fa-xs" />
+                </Link>
               </div>
             </div>
           </div>
