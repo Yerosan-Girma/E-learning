@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const GoogleIcon = () => (
@@ -11,14 +11,24 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GOOGLE_AUTH_URL =
-  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL
-    ? import.meta.env.VITE_API_BASE_URL.replace("/api", "")
-    : "http://localhost:5000") + "/api/auth/google";
+const rawApiBase =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_BASE_URL)
+    ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/+$/, "")
+    : "http://localhost:5000/api";
+const normalizedApiBase = rawApiBase.endsWith("/api") ? rawApiBase : `${rawApiBase}/api`;
+const GOOGLE_AUTH_URL = `${normalizedApiBase}/auth/google`;
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, signup, notify, isLoggedIn, dashboardPath } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error) {
+      notify("Google sign-in was cancelled or failed. Please try again.", "danger");
+    }
+  }, [searchParams, notify]);
 
   const [tab, setTab] = useState("signin"); // "signin" | "signup"
   const [loading, setLoading] = useState(false);

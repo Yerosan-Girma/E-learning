@@ -17,19 +17,29 @@ passport.deserializeUser(async (id, done) => {
 
 // Only configure Google Strategy if credentials are provided
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  const defaultCallback =
+    process.env.NODE_ENV === 'production'
+      ? 'https://e-leraning.onrender.com/api/auth/google/callback'
+      : 'http://localhost:5000/api/auth/google/callback';
+
   passport.use(
     new GoogleStrategy(
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
+        callbackURL: process.env.GOOGLE_CALLBACK_URL || defaultCallback,
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
+          const email = profile.emails && profile.emails[0] ? profile.emails[0].value : null;
+          if (!email) {
+            return done(new Error('No email found in Google profile'), null);
+          }
+
           // Check if user already exists
           const result = await pool.query(
             'SELECT * FROM users WHERE email = $1',
-            [profile.emails[0].value]
+            [email]
           );
 
           if (result.rows.length > 0) {
@@ -37,14 +47,20 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             return done(null, result.rows[0]);
           }
 
+          // Determine display name safely
+          const fullName =
+            profile.displayName ||
+            (profile.name ? `${profile.name.givenName || ''} ${profile.name.familyName || ''}`.trim() : '') ||
+            email.split('@')[0];
+
           // Create new user
           const newUser = await pool.query(
             `INSERT INTO users (full_name, email, password_hash, role, status) 
              VALUES ($1, $2, $3, $4, 'active') 
              RETURNING *`,
             [
-              profile.displayName || profile.name.givenName + ' ' + profile.name.familyName,
-              profile.emails[0].value,
+              fullName,
+              email,
               '', // Empty password for OAuth users
               'student', // Default role for OAuth users
             ]

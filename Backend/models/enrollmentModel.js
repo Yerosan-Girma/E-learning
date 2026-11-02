@@ -98,7 +98,11 @@ async function listEnrollmentsByUser(userId) {
         c.price,
         c.discount_price,
         c.instructor_id,
-        u.full_name AS instructor_name
+        u.full_name AS instructor_name,
+        COALESCE((SELECT COUNT(*) FROM course_lessons WHERE course_id = c.id), 0)::int AS total_lessons,
+        COALESCE((SELECT COUNT(*) FROM lesson_views lv 
+          INNER JOIN course_lessons cl ON lv.lesson_id = cl.id 
+          WHERE lv.user_id = e.user_id AND cl.course_id = c.id AND lv.completed = TRUE), 0)::int AS completed_lessons
       FROM enrollments e
       INNER JOIN courses c ON e.course_id = c.id
       INNER JOIN users u ON c.instructor_id = u.id

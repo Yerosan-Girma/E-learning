@@ -5,6 +5,7 @@ services:
     rootDir: .
     buildCommand: npm install
     startCommand: node server.js
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -19,7 +20,13 @@ services:
       - key: SESSION_SECRET
         generateValue: true
       - key: CORS_ORIGIN
-        value: https://your-app.vercel.app  # update after Vercel deploy
+        value: https://e-learning-three-phi.vercel.app
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        value: https://e-leraning.onrender.com/api/auth/google/callback
       - key: PAYMENT_GATEWAY_MODE
         value: mock
 

@@ -20,16 +20,33 @@ function parseSSLConfig(sslConfig) {
   return { rejectUnauthorized: false };
 }
 
+// Helper to normalize DATABASE_URL with uselibpqcompat to suppress pg SSL warnings
+function getNormalizedDatabaseUrl(url) {
+  if (!url) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.searchParams.has("sslmode") && !parsed.searchParams.has("uselibpqcompat")) {
+      parsed.searchParams.set("uselibpqcompat", "true");
+      return parsed.toString();
+    }
+  } catch (e) {
+    if (url.includes("sslmode=") && !url.includes("uselibpqcompat=")) {
+      return url + (url.includes("?") ? "&" : "?") + "uselibpqcompat=true";
+    }
+  }
+  return url;
+}
+
 // PostgreSQL connection pool configuration
 // Render / Neon provide a DATABASE_URL; individual vars are used locally
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
-        connectionString: process.env.DATABASE_URL,
+        connectionString: getNormalizedDatabaseUrl(process.env.DATABASE_URL),
         ssl: { rejectUnauthorized: false }, // required by Render/Neon
         max: Number(process.env.DB_POOL_MAX || 10),
         idleTimeoutMillis: Number(process.env.DB_POOL_IDLE_TIMEOUT || 30000),
-        connectionTimeoutMillis: Number(process.env.DB_POOL_CONNECTION_TIMEOUT || 2000),
+        connectionTimeoutMillis: Number(process.env.DB_POOL_CONNECTION_TIMEOUT || 10000),
         application_name: "edulearn-backend",
       }
     : {

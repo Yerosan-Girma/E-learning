@@ -22,10 +22,10 @@ function extractResourceName(url) {
 }
 
 const TABS = [
-  { id: "overview", label: "Overview", icon: "fa-info-circle" },
-  { id: "lessons", label: "Lessons", icon: "fa-play-circle" },
+  { id: "lessons", label: "Step-by-Step Tracker", icon: "fa-list-check" },
+  { id: "overview", label: "Course Overview", icon: "fa-info-circle" },
   { id: "resources", label: "Resources", icon: "fa-file-pdf" },
-  { id: "quizzes", label: "Quizzes", icon: "fa-list-check" },
+  { id: "quizzes", label: "Quizzes", icon: "fa-clipboard-question" },
   { id: "certificate", label: "Certificate", icon: "fa-award" },
 ];
 
@@ -49,6 +49,7 @@ export default function LearningPage() {
   const [certLoading, setCertLoading] = useState(false);
   const [certGenerating, setCertGenerating] = useState(false);
   const [showCertModal, setShowCertModal] = useState(false);
+  const [markingStep, setMarkingStep] = useState(false);
 
   async function loadLearningData() {
     setLoading(true);
@@ -65,7 +66,11 @@ export default function LearningPage() {
       setCourse(normalizeCourse(courseData.course));
       setLessons(nextLessons);
       setAccessMode(lessonData.accessMode || "preview_only");
-      setActiveLessonId(nextLessons[0]?.id || null);
+      
+      // Auto-select first uncompleted lesson if available, or first lesson
+      const firstUncompleted = nextLessons.find((l) => !l.completed);
+      setActiveLessonId(firstUncompleted ? firstUncompleted.id : nextLessons[0]?.id || null);
+      
       setQuizzes(nextQuizzes);
       setActiveQuizId(nextQuizzes[0]?.id || null);
     } catch (error) {
@@ -117,7 +122,7 @@ export default function LearningPage() {
   const moduleGroups = useMemo(() => {
     const groups = {};
     for (const lesson of lessons) {
-      const moduleName = lesson.module_name || "General";
+      const moduleName = lesson.module_name || "General Curriculum";
       if (!groups[moduleName]) groups[moduleName] = [];
       groups[moduleName].push(lesson);
     }
@@ -143,12 +148,15 @@ export default function LearningPage() {
     if (nextLesson) {
       setActiveLessonId(nextLesson.id);
       setActiveTab("lessons");
+      window.scrollTo({ top: 120, behavior: "smooth" });
     }
   };
 
-  const markLessonComplete = async () => {
+  // Step-by-Step Complete and advance
+  const markCompleteAndNext = async () => {
     if (!activeLesson) return;
 
+    setMarkingStep(true);
     try {
       const data = await api.markLessonCompletion(activeLesson.id, true);
       setLessons((current) =>
@@ -158,9 +166,24 @@ export default function LearningPage() {
             : lesson
         )
       );
-      notify(`Lesson marked complete. Overall progress: ${data.progress}%.`, "success");
+
+      const nextLesson = lessons[lessonIndex + 1];
+      if (nextLesson) {
+        notify(`Step ${lessonIndex + 1} completed! Advancing to Step ${lessonIndex + 2}`, "success");
+        setActiveLessonId(nextLesson.id);
+        window.scrollTo({ top: 120, behavior: "smooth" });
+      } else {
+        notify(`🎉 Congratulations! You have completed all lessons in this course!`, "success");
+        if (quizzes.length > 0) {
+          setActiveTab("quizzes");
+        } else {
+          setActiveTab("certificate");
+        }
+      }
     } catch (error) {
       notify(error.message || "Could not save lesson completion", "danger");
+    } finally {
+      setMarkingStep(false);
     }
   };
 
@@ -174,7 +197,6 @@ export default function LearningPage() {
       setQuizResult(data);
       if (data.passed) {
         notify(`Quiz passed with ${data.score}%! 🎉`, "success");
-        // Reload certificate if auto-generated
         if (data.certificateGenerated) {
           const certData = await api.getMyCertificates();
           const found = (certData.certificates || []).find(
@@ -192,7 +214,7 @@ export default function LearningPage() {
     }
   };
 
-  // Load existing certificate when the certificate tab is opened
+  // Load existing certificate
   useEffect(() => {
     if (activeTab !== "certificate" || accessMode === "preview_only") return;
 
@@ -227,14 +249,11 @@ export default function LearningPage() {
     }
   };
 
-  const handlePrintCertificate = () => {
-    setShowCertModal(true);
-  };
-
   if (loading) {
     return (
-      <div className="container py-5 mt-5">
-        <div className="alert alert-info">Loading course dashboard...</div>
+      <div className="container py-5 mt-5 text-center">
+        <div className="spinner-border text-primary" role="status" />
+        <p className="mt-3 text-muted">Loading your course tracker...</p>
       </div>
     );
   }
@@ -242,27 +261,31 @@ export default function LearningPage() {
   if (!course) {
     return (
       <div className="container py-5 mt-5">
-        <div className="alert alert-warning">Course dashboard could not be loaded.</div>
-        <Link to="/courses" className="btn btn-primary">Browse Courses</Link>
+        <div className="alert alert-warning">Course tracker could not be loaded.</div>
+        <Link to="/courses" className="btn btn-primary">
+          Browse Courses
+        </Link>
       </div>
     );
   }
 
   return (
     <>
+      {/* Top Navbar */}
       <nav className="navbar navbar-light bg-white shadow-sm fixed-top">
         <div className="container">
           <Link className="navbar-brand fw-bold text-primary fs-3" to="/">
-            <i className="fas fa-graduation-cap me-2" />EduLearn
+            <i className="fas fa-graduation-cap me-2" />
+            EduLearn
           </Link>
           <div className="d-flex align-items-center gap-2">
             <span className={`badge ${course.isFree ? "bg-success" : "bg-dark"}`}>
               {course.isFree ? "FREE" : "PAID"}
             </span>
-            <Link to={dashboardPath} className="btn btn-outline-primary btn-sm">
-              My Dashboard
+            <Link to={dashboardPath} className="btn btn-outline-primary btn-sm rounded-pill">
+              <i className="fas fa-gauge-high me-1" /> My Dashboard
             </Link>
-            <Link to={`/courses/${course.id}`} className="btn btn-primary btn-sm">
+            <Link to={`/courses/${course.id}`} className="btn btn-light btn-sm rounded-pill">
               Course Details
             </Link>
           </div>
@@ -271,40 +294,105 @@ export default function LearningPage() {
 
       <div className="learning-container">
         <div className="container">
-          <div className="course-header mb-4">
-            <div className="d-flex justify-content-between align-items-start flex-wrap gap-3">
-              <div>
-                <h2 className="fw-bold mb-1">Course Dashboard</h2>
-                <h4 className="text-primary mb-1">{course.title}</h4>
-                <p className="text-muted mb-0">
+          {/* Course Stepper Header */}
+          <div className="course-stepper-header">
+            <div className="row align-items-center g-3">
+              <div className="col-lg-7">
+                <div className="d-flex align-items-center gap-2 mb-1">
+                  <span className="badge bg-primary bg-opacity-10 text-primary fw-semibold px-2 py-1">
+                    {course.category || "Course"}
+                  </span>
+                  <span className="text-muted small">·</span>
+                  <span className="text-muted small">
+                    <i className="fas fa-chalkboard-user me-1" />
+                    {course.instructor || "Instructor"}
+                  </span>
+                </div>
+                <h3 className="fw-bold mb-1">{course.title}</h3>
+                <p className="text-muted mb-0 small">
                   {accessMode === "preview_only"
-                    ? "Preview mode — enroll to unlock all content."
-                    : "Full access active — continue your learning journey."}
+                    ? "Preview mode — enroll to unlock all steps and tests."
+                    : "Full access active — track your progress step-by-step."}
                 </p>
               </div>
-              <div className="progress-section" style={{ minWidth: 200 }}>
-                <small className="text-muted d-block mb-1">Course Progress</small>
-                <div className="progress" style={{ height: "10px" }}>
-                  <div
-                    className="progress-bar bg-success"
-                    style={{ width: `${completionPercent}%` }}
-                  />
+
+              {/* Progress Summary */}
+              <div className="col-lg-5">
+                <div className="p-3 bg-light rounded-4 border">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <small className="fw-bold text-dark">
+                      <i className="fas fa-bars-progress me-1 text-primary" /> Overall Progress
+                    </small>
+                    <span className="badge bg-primary rounded-pill px-2">{completionPercent}%</span>
+                  </div>
+                  <div className="progress mb-2 rounded-pill" style={{ height: "8px" }}>
+                    <div
+                      className={`progress-bar rounded-pill ${
+                        completionPercent === 100 ? "bg-success" : "bg-primary"
+                      }`}
+                      style={{ width: `${completionPercent}%` }}
+                    />
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center small text-muted">
+                    <span>
+                      {completedLessons} of {lessons.length} steps completed
+                    </span>
+                    {completionPercent === 100 ? (
+                      <span className="text-success fw-bold">
+                        <i className="fas fa-circle-check me-1" /> Course Finished
+                      </span>
+                    ) : (
+                      <span>{lessons.length - completedLessons} steps remaining</span>
+                    )}
+                  </div>
                 </div>
-                <small className="text-muted">
-                  {completedLessons}/{lessons.length} lessons · {completionPercent}% complete
-                </small>
               </div>
             </div>
           </div>
 
+          {/* Access Warning if Preview */}
           {accessMode === "preview_only" && (
-            <div className="alert alert-warning">
-              Only preview lessons are available.{" "}
-              <Link to={`/courses/${course.id}`}>Return to course page</Link> to enroll.
+            <div className="alert alert-warning d-flex align-items-center justify-content-between mb-4 rounded-4 shadow-sm">
+              <div>
+                <i className="fas fa-lock me-2 text-warning fs-5" />
+                <strong>Preview Mode:</strong> You only have access to sample preview lessons. Enroll to unlock the full step-by-step curriculum and certificate.
+              </div>
+              <Link to={`/courses/${course.id}`} className="btn btn-warning btn-sm fw-semibold rounded-pill px-3">
+                Enroll Now
+              </Link>
             </div>
           )}
 
-          <ul className="nav nav-tabs mb-4">
+          {/* 100% Completion Celebration Box */}
+          {completionPercent === 100 && (
+            <div className="celebration-box d-flex flex-wrap align-items-center justify-content-between gap-3 shadow-sm">
+              <div className="d-flex align-items-center gap-3">
+                <div
+                  className="bg-success text-white rounded-circle d-flex align-items-center justify-content-center"
+                  style={{ width: "52px", height: "52px", fontSize: "1.5rem" }}
+                >
+                  <i className="fas fa-award" />
+                </div>
+                <div>
+                  <h5 className="fw-bold text-success mb-1">Course Completed! 🎉</h5>
+                  <p className="mb-0 text-muted small">
+                    You have finished every lesson step in this course. Claim your official verified certificate!
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-success fw-semibold px-4 py-2 rounded-pill shadow-sm"
+                onClick={() => setActiveTab("certificate")}
+              >
+                <i className="fas fa-certificate me-2" />
+                View &amp; Print Certificate
+              </button>
+            </div>
+          )}
+
+          {/* Stepper Tabs */}
+          <ul className="nav stepper-nav-tabs mb-4 bg-white p-2 rounded-4 shadow-sm gap-2">
             {TABS.map((tab) => (
               <li className="nav-item" key={tab.id}>
                 <button
@@ -312,113 +400,157 @@ export default function LearningPage() {
                   className={`nav-link ${activeTab === tab.id ? "active" : ""}`}
                   onClick={() => setActiveTab(tab.id)}
                 >
-                  <i className={`fas ${tab.icon} me-1`} />
+                  <i className={`fas ${tab.icon} me-2`} />
                   {tab.label}
+                  {tab.id === "quizzes" && quizzes.length > 0 && (
+                    <span className="badge bg-secondary ms-2 rounded-pill">{quizzes.length}</span>
+                  )}
                 </button>
               </li>
             ))}
           </ul>
 
-          {activeTab === "overview" && (
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* TAB: LESSONS (STEP-BY-STEP TRACKER) */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {activeTab === "lessons" && (
             <div className="row g-4">
-              <div className="col-lg-8">
-                <div className="card border-0 shadow-sm">
-                  <div className="card-body">
-                    <h5 className="fw-bold mb-3">Course Overview</h5>
-                    <p>{course.description || course.shortDescription}</p>
-                    <div className="row g-3 mt-3">
-                      <div className="col-sm-4">
-                        <div className="border rounded p-3 text-center">
-                          <div className="fw-bold fs-4 text-primary">{lessons.length}</div>
-                          <small className="text-muted">Lessons</small>
-                        </div>
-                      </div>
-                      <div className="col-sm-4">
-                        <div className="border rounded p-3 text-center">
-                          <div className="fw-bold fs-4 text-primary">{moduleGroups.length}</div>
-                          <small className="text-muted">Modules</small>
-                        </div>
-                      </div>
-                      <div className="col-sm-4">
-                        <div className="border rounded p-3 text-center">
-                          <div className="fw-bold fs-4 text-primary">{quizzes.length}</div>
-                          <small className="text-muted">Quizzes</small>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* Left Column: Step-by-Step Curriculum Sidebar */}
               <div className="col-lg-4">
-                <div className="card border-0 shadow-sm">
-                  <div className="card-body">
-                    <h6 className="fw-bold mb-3">Module Progress</h6>
-                    {moduleGroups.map(([moduleName, moduleLessons]) => {
-                      const done = moduleLessons.filter((l) => l.completed).length;
-                      const pct = moduleLessons.length
-                        ? Math.round((done / moduleLessons.length) * 100)
-                        : 0;
+                <div className="card border-0 shadow-sm rounded-4 p-3 lecture-sidebar">
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <h6 className="fw-bold mb-0 text-dark">
+                      <i className="fas fa-list-ol me-2 text-primary" />
+                      Curriculum Steps
+                    </h6>
+                    <small className="text-muted">
+                      {completedLessons}/{lessons.length} Done
+                    </small>
+                  </div>
+
+                  {moduleGroups.length === 0 ? (
+                    <p className="text-muted small">No steps created yet.</p>
+                  ) : (
+                    moduleGroups.map(([moduleName, moduleLessons], modIdx) => {
+                      const modCompleted = moduleLessons.filter((l) => l.completed).length;
+                      const isModDone = modCompleted === moduleLessons.length && moduleLessons.length > 0;
+
                       return (
                         <div className="mb-3" key={moduleName}>
-                          <div className="d-flex justify-content-between small mb-1">
-                            <span>{moduleName}</span>
-                            <span>{done}/{moduleLessons.length}</span>
+                          <div className="d-flex justify-content-between align-items-center px-1 mb-2">
+                            <span className="fw-bold text-uppercase small text-muted" style={{ fontSize: "0.72rem" }}>
+                              Module {modIdx + 1}: {moduleName}
+                            </span>
+                            <span
+                              className={`badge rounded-pill ${
+                                isModDone ? "bg-success bg-opacity-10 text-success" : "bg-light text-muted"
+                              }`}
+                              style={{ fontSize: "0.7rem" }}
+                            >
+                              {modCompleted}/{moduleLessons.length}
+                            </span>
                           </div>
-                          <div className="progress" style={{ height: "6px" }}>
-                            <div className="progress-bar" style={{ width: `${pct}%` }} />
-                          </div>
+
+                          {moduleLessons.map((lesson) => {
+                            const isActive = lesson.id === activeLesson?.id;
+                            const globalStepNumber =
+                              lessons.findIndex((l) => l.id === lesson.id) + 1;
+
+                            return (
+                              <button
+                                key={lesson.id}
+                                type="button"
+                                className={`lecture-stepper-item ${isActive ? "active" : ""}`}
+                                onClick={() => setActiveLessonId(lesson.id)}
+                              >
+                                {/* Step Indicator Icon */}
+                                <div
+                                  className={`step-num-badge ${
+                                    lesson.completed
+                                      ? "step-num-completed"
+                                      : isActive
+                                      ? "step-num-active"
+                                      : "step-num-upcoming"
+                                  }`}
+                                >
+                                  {lesson.completed ? (
+                                    <i className="fas fa-check" />
+                                  ) : (
+                                    globalStepNumber
+                                  )}
+                                </div>
+
+                                <div className="flex-grow-1 overflow-hidden me-2">
+                                  <div
+                                    className={`small text-truncate ${
+                                      isActive ? "fw-bold text-primary" : "text-dark"
+                                    }`}
+                                  >
+                                    {lesson.title}
+                                  </div>
+                                  <div className="d-flex align-items-center gap-2 mt-1">
+                                    <small className="text-muted" style={{ fontSize: "0.72rem" }}>
+                                      {lesson.video_url ? (
+                                        <span>
+                                          <i className="fas fa-play-circle me-1" /> Video
+                                        </span>
+                                      ) : (
+                                        <span>
+                                          <i className="fas fa-file-lines me-1" /> Reading
+                                        </span>
+                                      )}
+                                    </small>
+                                    {lesson.is_preview && (
+                                      <span className="badge bg-info bg-opacity-10 text-info py-0 px-1" style={{ fontSize: "0.68rem" }}>
+                                        Preview
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {isActive && (
+                                  <i className="fas fa-chevron-right text-primary small" />
+                                )}
+                              </button>
+                            );
+                          })}
                         </div>
                       );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "lessons" && (
-            <div className="row">
-              <div className="col-lg-4">
-                <div className="lecture-sidebar mb-4">
-                  <h5 className="fw-bold mb-3">Modules & Lessons</h5>
-                  {moduleGroups.length === 0 ? (
-                    <p className="text-muted mb-0">No lessons published yet.</p>
-                  ) : (
-                    moduleGroups.map(([moduleName, moduleLessons]) => (
-                      <div className="mb-3" key={moduleName}>
-                        <h6 className="fw-bold text-primary small mb-2">{moduleName}</h6>
-                        {moduleLessons.map((lesson) => {
-                          const isActive = lesson.id === activeLesson?.id;
-                          return (
-                            <button
-                              key={lesson.id}
-                              type="button"
-                              className={`lecture-item w-100 text-start ${isActive ? "active" : ""} ${
-                                lesson.completed ? "completed" : ""
-                              }`}
-                              onClick={() => setActiveLessonId(lesson.id)}
-                            >
-                              <div className="d-flex justify-content-between align-items-center">
-                                <strong className="small">{lesson.title}</strong>
-                                {lesson.completed ? (
-                                  <i className="fas fa-check-circle text-success" />
-                                ) : lesson.is_preview ? (
-                                  <span className="badge bg-info">Preview</span>
-                                ) : null}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))
+                    })
                   )}
                 </div>
               </div>
 
+              {/* Right Column: Active Lesson Stage */}
               <div className="col-lg-8">
                 {activeLesson ? (
                   <>
-                    <div className="video-container">
+                    {/* Lesson Header Breadcrumb */}
+                    <div className="card border-0 shadow-sm rounded-4 p-3 mb-3 bg-white">
+                      <div className="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                          <small className="text-muted text-uppercase fw-semibold" style={{ fontSize: "0.75rem" }}>
+                            <i className="fas fa-circle-dot text-primary me-1" />
+                            Step {lessonIndex + 1} of {lessons.length} · {activeLesson.module_name || "General"}
+                          </small>
+                          <h4 className="fw-bold mb-0 mt-1">{activeLesson.title}</h4>
+                        </div>
+                        <div>
+                          {activeLesson.completed ? (
+                            <span className="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill fw-semibold">
+                              <i className="fas fa-circle-check me-1" /> Step Completed
+                            </span>
+                          ) : (
+                            <span className="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill fw-semibold">
+                              <i className="fas fa-spinner fa-spin me-1" /> Current Step
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Video Player or Reading View */}
+                    <div className="video-container rounded-4 mb-4">
                       <div className="video-wrapper">
                         {activeLesson.video_url ? (
                           <iframe
@@ -430,311 +562,410 @@ export default function LearningPage() {
                             allowFullScreen
                           />
                         ) : (
-                          <div className="d-flex align-items-center justify-content-center h-100 bg-light">
-                            <div className="text-center p-4">
-                              <i className="fas fa-file-lines fa-3x text-primary mb-3" />
-                              <p className="mb-0">Text-based lesson — no video attached.</p>
+                          <div className="d-flex align-items-center justify-content-center h-100 bg-light text-center p-4">
+                            <div>
+                              <i className="fas fa-book-open-reader fa-3x text-primary mb-3" />
+                              <h5 className="fw-bold mb-1">Reading &amp; Interactive Lesson</h5>
+                              <p className="text-muted small mb-0">Study the lesson notes and resources below.</p>
                             </div>
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="d-flex align-items-center gap-2 mb-2">
-                      <h3 className="fw-bold mb-0">{activeLesson.title}</h3>
-                      {activeLesson.completed && (
-                        <span className="badge bg-success">Completed</span>
-                      )}
-                    </div>
-                    {activeLesson.module_name && (
-                      <p className="text-muted small mb-3">{activeLesson.module_name}</p>
-                    )}
-
-                    <div className="notes-container">
-                      <h5 className="fw-bold mb-3">Lesson Notes</h5>
+                    {/* Notes & Content */}
+                    <div className="notes-container rounded-4 mb-4">
+                      <h5 className="fw-bold mb-3">
+                        <i className="fas fa-file-pen text-primary me-2" />
+                        Lesson Notes &amp; Instructions
+                      </h5>
                       <div
-                        className="lesson-content"
+                        className="lesson-content text-secondary"
                         dangerouslySetInnerHTML={{
                           __html:
                             activeLesson.notes_content ||
-                            "<p class='text-muted'>No lesson notes available.</p>",
+                            "<p class='text-muted'>No written notes provided for this lesson.</p>",
                         }}
                       />
 
+                      {/* Download Resource Attachment */}
                       {activeLesson.attachment_url && accessMode !== "preview_only" && (
-                        <div className="mt-3">
+                        <div className="mt-4 p-3 bg-light rounded-3 border d-flex align-items-center justify-content-between">
+                          <div className="d-flex align-items-center gap-2">
+                            <i className="fas fa-paperclip text-primary fs-5" />
+                            <div>
+                              <strong className="d-block small">Supplementary Resource</strong>
+                              <small className="text-muted">
+                                {extractResourceName(activeLesson.attachment_url)}
+                              </small>
+                            </div>
+                          </div>
                           <a
                             href={activeLesson.attachment_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="btn btn-outline-secondary btn-sm"
+                            className="btn btn-outline-primary btn-sm rounded-pill"
                           >
-                            <i className="fas fa-download me-1" />
-                            Download Lesson Resource
+                            <i className="fas fa-download me-1" /> Download
                           </a>
                         </div>
                       )}
+                    </div>
 
-                      <div className="d-flex justify-content-between mt-4 flex-wrap gap-2">
-                        <button
-                          className="btn btn-outline-primary"
-                          type="button"
-                          disabled={lessonIndex <= 0}
-                          onClick={() => navigateLesson(-1)}
-                        >
-                          Previous
-                        </button>
-                        <div className="d-flex gap-2">
-                          {accessMode !== "preview_only" && !activeLesson.completed && (
-                            <button
-                              className="btn btn-outline-success"
-                              type="button"
-                              onClick={markLessonComplete}
-                            >
-                              Mark Complete
-                            </button>
-                          )}
+                    {/* Step-by-Step Bottom Action Bar */}
+                    <div className="step-action-bar">
+                      <button
+                        className="btn btn-outline-secondary rounded-pill px-4"
+                        type="button"
+                        disabled={lessonIndex <= 0}
+                        onClick={() => navigateLesson(-1)}
+                      >
+                        <i className="fas fa-arrow-left me-2" /> Previous Step
+                      </button>
+
+                      <div className="d-flex align-items-center gap-2">
+                        {accessMode !== "preview_only" && (
                           <button
-                            className="btn btn-primary"
+                            className={`btn rounded-pill px-4 fw-semibold ${
+                              activeLesson.completed ? "btn-success" : "btn-primary shadow-sm"
+                            }`}
                             type="button"
-                            disabled={lessonIndex >= lessons.length - 1}
-                            onClick={() => navigateLesson(1)}
+                            disabled={markingStep}
+                            onClick={markCompleteAndNext}
                           >
-                            Next Lesson
+                            {markingStep ? (
+                              <>
+                                <span className="spinner-border spinner-border-sm me-2" role="status" />
+                                Saving...
+                              </>
+                            ) : activeLesson.completed ? (
+                              <>
+                                <i className="fas fa-check-double me-2" />
+                                {lessonIndex < lessons.length - 1 ? "Next Step →" : "Course Finished ✓"}
+                              </>
+                            ) : (
+                              <>
+                                <i className="fas fa-check me-2" />
+                                Complete &amp; Next Step →
+                              </>
+                            )}
                           </button>
-                        </div>
+                        )}
+
+                        {lessonIndex < lessons.length - 1 && (
+                          <button
+                            className="btn btn-outline-primary rounded-pill px-3"
+                            type="button"
+                            onClick={() => navigateLesson(1)}
+                            title="Skip to next"
+                          >
+                            Next <i className="fas fa-arrow-right ms-1" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   </>
                 ) : (
-                  <div className="alert alert-light border">Select a lesson to begin.</div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "resources" && (
-            <div className="card border-0 shadow-sm">
-              <div className="card-body">
-                <h5 className="fw-bold mb-3">Downloadable Learning Materials</h5>
-                {downloadableResources.length === 0 ? (
-                  <p className="text-muted mb-0">No downloadable resources for this course yet.</p>
-                ) : (
-                  <div className="table-responsive">
-                    <table className="table align-middle">
-                      <thead>
-                        <tr>
-                          <th>Resource</th>
-                          <th>Lesson</th>
-                          <th>Module</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {downloadableResources.map((resource) => (
-                          <tr key={resource.id}>
-                            <td>
-                              <i className="fas fa-file-pdf text-danger me-2" />
-                              {resource.title}
-                            </td>
-                            <td className="small text-muted">{resource.lessonTitle}</td>
-                            <td className="small text-muted">{resource.moduleName}</td>
-                            <td>
-                              <a
-                                href={resource.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn btn-sm btn-outline-primary"
-                              >
-                                <i className="fas fa-download me-1" />Download
-                              </a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="card border-0 shadow-sm rounded-4 p-5 text-center">
+                    <p className="text-muted mb-0">Select a step from the curriculum to begin learning.</p>
                   </div>
                 )}
               </div>
             </div>
           )}
 
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* TAB: OVERVIEW */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {activeTab === "overview" && (
+            <div className="row g-4">
+              <div className="col-lg-8">
+                <div className="card border-0 shadow-sm rounded-4 p-4">
+                  <h5 className="fw-bold mb-3">About this Course</h5>
+                  <p className="text-secondary">{course.description || course.shortDescription}</p>
+
+                  <div className="row g-3 mt-3">
+                    <div className="col-sm-4">
+                      <div className="bg-light rounded-3 p-3 text-center border">
+                        <div className="fw-bold fs-3 text-primary">{lessons.length}</div>
+                        <small className="text-muted fw-semibold">Total Steps</small>
+                      </div>
+                    </div>
+                    <div className="col-sm-4">
+                      <div className="bg-light rounded-3 p-3 text-center border">
+                        <div className="fw-bold fs-3 text-primary">{moduleGroups.length}</div>
+                        <small className="text-muted fw-semibold">Modules</small>
+                      </div>
+                    </div>
+                    <div className="col-sm-4">
+                      <div className="bg-light rounded-3 p-3 text-center border">
+                        <div className="fw-bold fs-3 text-primary">{quizzes.length}</div>
+                        <small className="text-muted fw-semibold">Assessments</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="col-lg-4">
+                <div className="card border-0 shadow-sm rounded-4 p-4">
+                  <h6 className="fw-bold mb-3">Module Progress Breakdown</h6>
+                  {moduleGroups.map(([moduleName, moduleLessons]) => {
+                    const done = moduleLessons.filter((l) => l.completed).length;
+                    const pct = moduleLessons.length
+                      ? Math.round((done / moduleLessons.length) * 100)
+                      : 0;
+
+                    return (
+                      <div className="mb-3" key={moduleName}>
+                        <div className="d-flex justify-content-between small mb-1">
+                          <span className="fw-semibold text-truncate me-2">{moduleName}</span>
+                          <span className="text-muted">{pct}%</span>
+                        </div>
+                        <div className="progress rounded-pill" style={{ height: "6px" }}>
+                          <div
+                            className={`progress-bar rounded-pill ${pct === 100 ? "bg-success" : "bg-primary"}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* TAB: RESOURCES */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {activeTab === "resources" && (
+            <div className="card border-0 shadow-sm rounded-4 p-4">
+              <h5 className="fw-bold mb-3">Downloadable Course Resources</h5>
+              {downloadableResources.length === 0 ? (
+                <div className="text-center py-5 text-muted">
+                  <i className="fas fa-folder-open fa-3x mb-3 opacity-50" />
+                  <p className="mb-0">No downloadable files attached to this course yet.</p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="table table-hover align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        <th>Resource Title</th>
+                        <th>Associated Lesson</th>
+                        <th>Module</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {downloadableResources.map((resource) => (
+                        <tr key={resource.id}>
+                          <td className="fw-semibold">
+                            <i className="fas fa-file-arrow-down text-primary me-2" />
+                            {resource.title}
+                          </td>
+                          <td className="small text-muted">{resource.lessonTitle}</td>
+                          <td className="small text-muted">{resource.moduleName}</td>
+                          <td>
+                            <a
+                              href={resource.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-sm btn-outline-primary rounded-pill px-3"
+                            >
+                              <i className="fas fa-download me-1" /> Download
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* TAB: QUIZZES */}
+          {/* ───────────────────────────────────────────────────────────── */}
           {activeTab === "quizzes" && (
             <div className="row g-4">
               <div className="col-lg-4">
-                <div className="card border-0 shadow-sm">
-                  <div className="card-body">
-                    <h6 className="fw-bold mb-3">Course Quizzes</h6>
-                    {quizzes.length === 0 ? (
-                      <small className="text-muted">No quizzes available.</small>
-                    ) : (
-                      quizzes.map((quiz) => (
-                        <button
-                          key={quiz.id}
-                          type="button"
-                          className={`lecture-item w-100 text-start mb-2 ${
-                            Number(activeQuizId) === Number(quiz.id) ? "active" : ""
-                          }`}
-                          onClick={() => setActiveQuizId(quiz.id)}
-                        >
-                          <strong>{quiz.title}</strong>
-                          <small className="text-muted d-block">
-                            {quiz.question_count} questions
-                          </small>
+                <div className="card border-0 shadow-sm rounded-4 p-3">
+                  <h6 className="fw-bold mb-3">
+                    <i className="fas fa-clipboard-question text-primary me-2" />
+                    Available Quizzes
+                  </h6>
+                  {quizzes.length === 0 ? (
+                    <small className="text-muted">No quizzes assigned to this course.</small>
+                  ) : (
+                    quizzes.map((quiz) => (
+                      <button
+                        key={quiz.id}
+                        type="button"
+                        className={`lecture-stepper-item mb-2 ${
+                          Number(activeQuizId) === Number(quiz.id) ? "active" : ""
+                        }`}
+                        onClick={() => setActiveQuizId(quiz.id)}
+                      >
+                        <div className="flex-grow-1">
+                          <strong className="d-block small">{quiz.title}</strong>
+                          <small className="text-muted">{quiz.question_count} questions</small>
                           {quiz.latestAttempt && (
                             <small
-                              className={`d-block ${
+                              className={`d-block fw-semibold ${
                                 Number(quiz.latestAttempt.score) >= 50
                                   ? "text-success"
                                   : "text-danger"
                               }`}
                             >
                               Score: {Number(quiz.latestAttempt.score).toFixed(0)}%{" "}
-                              {Number(quiz.latestAttempt.score) >= 50 ? "✓" : "✗"}
+                              {Number(quiz.latestAttempt.score) >= 50 ? "✓ (Passed)" : "✗"}
                             </small>
                           )}
-                        </button>
-                      ))
-                    )}
-                  </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
                 </div>
               </div>
 
               <div className="col-lg-8">
                 {accessMode === "preview_only" ? (
-                  <div className="alert alert-warning">
-                    Enroll in the course to access quizzes and assessments.
+                  <div className="alert alert-warning rounded-4 p-4">
+                    <i className="fas fa-lock me-2" /> Enroll in this course to take quizzes and earn credit.
                   </div>
                 ) : activeQuiz?.quiz ? (
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-body">
-                      <div className="d-flex justify-content-between align-items-start mb-2">
-                        <h4 className="fw-bold mb-0">{activeQuiz.quiz.title}</h4>
-                        <span className="badge bg-info text-dark">Pass: 50%</span>
-                      </div>
-                      <p className="text-muted">
-                        {activeQuiz.quiz.description || "Complete this quiz to test your knowledge."}
-                      </p>
-                      <p className="small text-muted mb-4">
-                        Score 50% or above to earn your certificate.
-                      </p>
-
-                      {/* Show result banner + cert link if already passed */}
-                      {quizResult && quizResult.passed && (
-                        <div className="alert alert-success d-flex align-items-center gap-3 mb-4">
-                          <i className="fas fa-trophy fa-2x text-warning" />
-                          <div className="flex-grow-1">
-                            <strong>You passed with {Number(quizResult.score).toFixed(0)}%!</strong>
-                            <br />
-                            <small>Your certificate is ready.</small>
-                          </div>
-                          <button
-                            type="button"
-                            className="btn btn-warning btn-sm fw-semibold"
-                            onClick={() => setActiveTab("certificate")}
-                          >
-                            <i className="fas fa-award me-1" />
-                            View Certificate
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Failed result */}
-                      {quizResult && !quizResult.passed && (
-                        <div className="alert alert-warning mb-4">
-                          <strong>Score: {Number(quizResult.score).toFixed(0)}%</strong> — You need
-                          50% to pass. Scroll down to retake.
-                        </div>
-                      )}
-
-                      <form onSubmit={submitQuiz}>
-                        {activeQuiz.questions.map((question, index) => (
-                          <div className="mb-4" key={question.id}>
-                            <h6 className="fw-bold">
-                              {index + 1}. {question.question_text}
-                            </h6>
-                            {question.options.map((option, optionIndex) => (
-                              <div className="form-check" key={`${question.id}-${optionIndex}`}>
-                                <input
-                                  className="form-check-input"
-                                  type="radio"
-                                  name={`question-${question.id}`}
-                                  id={`question-${question.id}-option-${optionIndex}`}
-                                  checked={Number(quizAnswers[question.id]) === optionIndex}
-                                  onChange={() =>
-                                    setQuizAnswers((current) => ({
-                                      ...current,
-                                      [question.id]: optionIndex,
-                                    }))
-                                  }
-                                />
-                                <label
-                                  className="form-check-label"
-                                  htmlFor={`question-${question.id}-option-${optionIndex}`}
-                                >
-                                  {option}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        ))}
-
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={submittingQuiz}
-                        >
-                          {submittingQuiz ? (
-                            <>
-                              <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-                              Submitting…
-                            </>
-                          ) : quizResult ? (
-                            "Retake Quiz"
-                          ) : (
-                            "Submit Quiz"
-                          )}
-                        </button>
-                      </form>
+                  <div className="card border-0 shadow-sm rounded-4 p-4">
+                    <div className="d-flex justify-content-between align-items-start mb-2">
+                      <h4 className="fw-bold mb-0">{activeQuiz.quiz.title}</h4>
+                      <span className="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">
+                        Passing Grade: 50%
+                      </span>
                     </div>
+                    <p className="text-muted mb-4">
+                      {activeQuiz.quiz.description || "Complete all questions below to verify your comprehension."}
+                    </p>
+
+                    {quizResult && quizResult.passed && (
+                      <div className="alert alert-success d-flex align-items-center gap-3 mb-4 rounded-4">
+                        <i className="fas fa-trophy fa-2x text-warning" />
+                        <div className="flex-grow-1">
+                          <strong>Congratulations! You passed with {Number(quizResult.score).toFixed(0)}%!</strong>
+                          <br />
+                          <small>Your verified certificate has been unlocked.</small>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-warning btn-sm fw-semibold rounded-pill px-3"
+                          onClick={() => setActiveTab("certificate")}
+                        >
+                          <i className="fas fa-award me-1" /> Claim Certificate
+                        </button>
+                      </div>
+                    )}
+
+                    {quizResult && !quizResult.passed && (
+                      <div className="alert alert-warning mb-4 rounded-4">
+                        <strong>Score: {Number(quizResult.score).toFixed(0)}%</strong> — You need 50% to pass. You can review your answers and retake below.
+                      </div>
+                    )}
+
+                    <form onSubmit={submitQuiz}>
+                      {activeQuiz.questions.map((question, index) => (
+                        <div className="mb-4 p-3 bg-light rounded-3 border" key={question.id}>
+                          <h6 className="fw-bold mb-3">
+                            <span className="badge bg-primary me-2">{index + 1}</span>
+                            {question.question_text}
+                          </h6>
+                          {question.options.map((option, optionIndex) => (
+                            <div className="form-check mb-2" key={`${question.id}-${optionIndex}`}>
+                              <input
+                                className="form-check-input"
+                                type="radio"
+                                name={`question-${question.id}`}
+                                id={`question-${question.id}-option-${optionIndex}`}
+                                checked={Number(quizAnswers[question.id]) === optionIndex}
+                                onChange={() =>
+                                  setQuizAnswers((current) => ({
+                                    ...current,
+                                    [question.id]: optionIndex,
+                                  }))
+                                }
+                              />
+                              <label
+                                className="form-check-label"
+                                htmlFor={`question-${question.id}-option-${optionIndex}`}
+                              >
+                                {option}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+
+                      <button
+                        type="submit"
+                        className="btn btn-primary rounded-pill px-4 fw-semibold"
+                        disabled={submittingQuiz}
+                      >
+                        {submittingQuiz ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" />
+                            Evaluating Answers...
+                          </>
+                        ) : quizResult ? (
+                          "Retake Quiz"
+                        ) : (
+                          "Submit Quiz Answers"
+                        )}
+                      </button>
+                    </form>
                   </div>
                 ) : (
-                  <div className="alert alert-light border">Select a quiz to begin.</div>
+                  <div className="card border-0 shadow-sm rounded-4 p-4 text-center text-muted">
+                    Select a quiz from the list to begin the assessment.
+                  </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* ── Certificate Tab ── */}
+          {/* ───────────────────────────────────────────────────────────── */}
+          {/* TAB: CERTIFICATE */}
+          {/* ───────────────────────────────────────────────────────────── */}
           {activeTab === "certificate" && (
             <div className="row justify-content-center">
               <div className="col-lg-8">
                 {accessMode === "preview_only" ? (
-                  <div className="alert alert-warning text-center">
-                    <i className="fas fa-lock fa-2x mb-3 d-block" />
-                    Enroll in this course to earn a certificate.
+                  <div className="alert alert-warning text-center rounded-4 p-5">
+                    <i className="fas fa-lock fa-3x mb-3 text-warning d-block" />
+                    <h5>Enrollment Required</h5>
+                    <p className="text-muted">Enroll in this course to earn your verified certificate upon completion.</p>
                   </div>
                 ) : certLoading ? (
                   <div className="text-center py-5">
                     <div className="spinner-border text-primary" role="status" />
-                    <p className="mt-3 text-muted">Checking your certificate…</p>
+                    <p className="mt-3 text-muted">Verifying certificate credentials...</p>
                   </div>
                 ) : certificate ? (
-                  /* ── Has certificate ── */
-                  <div className="card border-0 shadow-sm text-center">
+                  /* Has Certificate */
+                  <div className="card border-0 shadow-sm text-center rounded-4 overflow-hidden">
                     <div
-                      className="card-header border-0 py-4"
+                      className="card-header border-0 py-5 text-white"
                       style={{
-                        background: "linear-gradient(135deg, #1a3a6b 0%, #b8972a 100%)",
+                        background: "linear-gradient(135deg, #1e3a8a 0%, #d97706 100%)",
                       }}
                     >
-                      <i className="fas fa-award fa-3x text-white mb-2 d-block" />
-                      <h4 className="text-white fw-bold mb-0">Congratulations!</h4>
-                      <p className="text-white-50 mb-0 small">You earned a certificate</p>
+                      <i className="fas fa-award fa-4x mb-3 d-block" />
+                      <h3 className="fw-bold mb-1">Official Certificate of Completion</h3>
+                      <p className="text-white-50 mb-0">Verified and Issued by EduLearn</p>
                     </div>
+
                     <div className="card-body p-4">
-                      <h5 className="fw-bold mb-1">{certificate.course_title}</h5>
-                      <p className="text-muted small mb-3">
+                      <h4 className="fw-bold mb-1 text-dark">{certificate.course_title}</h4>
+                      <p className="text-muted small mb-4">
                         Issued on{" "}
                         {new Date(certificate.issue_date).toLocaleDateString("en-US", {
                           year: "numeric",
@@ -743,13 +974,11 @@ export default function LearningPage() {
                         })}
                       </p>
 
-                      <div className="bg-light rounded p-3 mb-4 text-start">
+                      <div className="bg-light rounded-4 p-3 mb-4 text-start border">
                         <div className="row g-2 small">
                           <div className="col-sm-6">
                             <span className="text-muted">Student:</span>{" "}
-                            <strong>
-                              {certificate.student_name || user?.name || "—"}
-                            </strong>
+                            <strong>{certificate.student_name || user?.name || "Student"}</strong>
                           </div>
                           {certificate.instructor_name && (
                             <div className="col-sm-6">
@@ -757,54 +986,65 @@ export default function LearningPage() {
                               <strong>{certificate.instructor_name}</strong>
                             </div>
                           )}
-                          <div className="col-12">
-                            <span className="text-muted">Certificate No.:</span>{" "}
-                            <code className="small">{certificate.certificate_number}</code>
+                          <div className="col-12 mt-2 pt-2 border-top">
+                            <span className="text-muted">Certificate ID:</span>{" "}
+                            <code className="text-primary fw-bold ms-1">{certificate.certificate_number}</code>
                           </div>
                         </div>
                       </div>
 
                       <button
                         type="button"
-                        className="btn btn-primary btn-lg d-flex align-items-center gap-2 mx-auto"
+                        className="btn btn-primary btn-lg rounded-pill px-5 fw-semibold d-inline-flex align-items-center gap-2 shadow"
                         onClick={() => setShowCertModal(true)}
                       >
-                        <i className="fas fa-print" />
-                        View &amp; Print Certificate
+                        <i className="fas fa-print" /> View &amp; Print Certificate
                       </button>
                     </div>
                   </div>
                 ) : (
-                  /* ── No certificate yet ── */
-                  <div className="card border-0 shadow-sm text-center p-5">
-                    <i className="fas fa-award fa-4x text-muted mb-4" />
-                    <h5 className="fw-bold mb-2">Earn Your Certificate</h5>
-                    <p className="text-muted mb-4">
-                      Complete a quiz with a score of <strong>50% or above</strong> to earn your
-                      certificate of completion for <em>{course?.title}</em>.
+                  /* No certificate yet */
+                  <div className="card border-0 shadow-sm text-center p-5 rounded-4">
+                    <div
+                      className="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning rounded-circle mx-auto mb-3"
+                      style={{ width: "80px", height: "80px" }}
+                    >
+                      <i className="fas fa-award fa-3x" />
+                    </div>
+                    <h4 className="fw-bold mb-2">Unlock Your Certificate</h4>
+                    <p className="text-muted mx-auto mb-4" style={{ maxWidth: "480px" }}>
+                      Complete 100% of the course lessons and pass the course assessment quiz with <strong>50% or higher</strong> to receive your verified certificate.
                     </p>
-                    {quizzes.length === 0 ? (
-                      <p className="text-muted small">No quizzes available for this course yet.</p>
-                    ) : (
-                      <div className="d-flex flex-column gap-2">
+
+                    <div className="d-flex justify-content-center gap-3">
+                      <button
+                        type="button"
+                        className="btn btn-primary rounded-pill px-4 fw-semibold"
+                        onClick={() => setActiveTab("lessons")}
+                      >
+                        <i className="fas fa-play me-2" /> Continue Course Steps
+                      </button>
+                      {quizzes.length > 0 && (
                         <button
                           type="button"
-                          className="btn btn-outline-primary mx-auto"
+                          className="btn btn-outline-primary rounded-pill px-4 fw-semibold"
                           onClick={() => setActiveTab("quizzes")}
                         >
-                          <i className="fas fa-list-check me-2" />
-                          Go to Quizzes
+                          <i className="fas fa-clipboard-question me-2" /> Go to Quizzes
                         </button>
-                        <button
-                          type="button"
-                          className="btn btn-link btn-sm text-muted"
-                          disabled={certGenerating}
-                          onClick={handleGenerateCertificate}
-                        >
-                          {certGenerating ? "Checking…" : "Already passed? Generate certificate"}
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        className="btn btn-link btn-sm text-muted"
+                        disabled={certGenerating}
+                        onClick={handleGenerateCertificate}
+                      >
+                        {certGenerating ? "Verifying..." : "Already passed? Click here to generate certificate"}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -813,7 +1053,7 @@ export default function LearningPage() {
         </div>
       </div>
 
-      {/* Printable certificate modal */}
+      {/* Printable Certificate Modal */}
       {showCertModal && certificate && (
         <PrintableCertificate
           certificate={certificate}

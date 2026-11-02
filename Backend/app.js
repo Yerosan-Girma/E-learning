@@ -102,6 +102,11 @@ app.use(morgan("dev"));
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Root health check endpoint for Render / load balancers (handles both GET and HEAD)
+app.get("/", (req, res) => {
+  return sendSuccess(res, { uptime: process.uptime(), status: "healthy" }, "EduLearn Backend API is online");
+});
+
 app.get("/api/health", (req, res) => {
   return sendSuccess(res, { uptime: process.uptime() }, "API is running");
 });
