@@ -17,7 +17,19 @@ const rawApiBase =
     ? import.meta.env.VITE_API_BASE_URL.trim().replace(/\/+$/, "")
     : "http://localhost:5000/api";
 const normalizedApiBase = rawApiBase.endsWith("/api") ? rawApiBase : `${rawApiBase}/api`;
-const GOOGLE_AUTH_URL = `${normalizedApiBase}/auth/google`;
+
+const GOOGLE_CLIENT_ID = "846651054103-cjr8t8lun9glgpaba7ad8qqsb381v76f.apps.googleusercontent.com";
+const isLocalHost =
+  typeof window !== "undefined" &&
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const callbackUrl = isLocalHost
+  ? "http://localhost:5000/api/auth/google/callback"
+  : "https://e-leraning.onrender.com/api/auth/google/callback";
+
+// Direct Google OAuth URL — opens Google sign-in directly, eliminating Render cold-start terminal screen
+const DIRECT_GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+  callbackUrl
+)}&scope=profile%20email&prompt=select_account`;
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -163,7 +175,12 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setGoogleLoading(true);
-                      window.location.href = GOOGLE_AUTH_URL;
+                      // Ping backend to warm it up in background while user is selecting account on Google
+                      try {
+                        fetch(`${normalizedApiBase}/health`, { mode: "no-cors" }).catch(() => {});
+                      } catch (_) {}
+                      // Direct navigation to Google
+                      window.location.href = DIRECT_GOOGLE_AUTH_URL;
                     }}
                     disabled={googleLoading}
                     className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
