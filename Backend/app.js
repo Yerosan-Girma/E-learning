@@ -28,6 +28,9 @@ const { sendSuccess } = require("./utils/response");
 
 const app = express();
 
+// Trust reverse proxy (Render, Cloudflare, Vercel) so rate limiters track real client IPs
+app.set("trust proxy", 1);
+
 const configuredOrigins = (process.env.CORS_ORIGIN ||
   "http://localhost:5173,http://127.0.0.1:5173")
   .split(",")

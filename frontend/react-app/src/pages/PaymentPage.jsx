@@ -93,8 +93,15 @@ export default function PaymentPage() {
   useEffect(() => {
     if (!awaitingChapa?.txRef) return;
     let isCancelled = false;
+    let pollCount = 0;
 
     const interval = setInterval(async () => {
+      pollCount += 1;
+      if (pollCount > 50) {
+        clearInterval(interval);
+        return;
+      }
+
       try {
         const res = await api.verifyChapaPayment(awaitingChapa.txRef);
         if (isCancelled) return;
@@ -117,7 +124,7 @@ export default function PaymentPage() {
       } catch (err) {
         // Still pending on Chapa, keep waiting
       }
-    }, 2500);
+    }, 3500);
 
     return () => {
       isCancelled = true;
