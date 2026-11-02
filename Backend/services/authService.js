@@ -191,9 +191,108 @@ async function resendVerification({ email }) {
   return { message: "If your email is registered, a new verification link has been sent." };
 }
 
+async function loginWithGoogleToken(credential) {
+  if (!credential) {
+    throw new ApiError(400, "Google credential token is required");
+  }
+
+  // Verify the ID token via Google's official tokeninfo endpoint
+  let googleUser;
+  try {
+    const response = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
+    );
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      throw new Error(errBody.error_description || `Google verification failed (HTTP ${response.status})`);
+    }
+    googleUser = await response.json();
+  } catch (err) {
+    throw new ApiError(401, `Invalid Google credential: ${err.message}`);
+  }
+
+  const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+  if (expectedClientId && googleUser.aud !== expectedClientId) {
+    throw new ApiError(401, "Google token audience mismatch");
+  }
+
+  const email = googleUser.email;
+  if (!email) {
+    throw new ApiError(400, "Google account does not have an associated email address");
+  }
+
+  let user = await userModel.findByEmail(email);
+
+  if (!user) {
+    const fullName =
+      googleUser.name ||
+      `${googleUser.given_name || ""} ${googleUser.family_name || ""}`.trim() ||
+      email.split("@")[0];
+
+    const userId = await userModel.createUser({
+      fullName,
+      email,
+      passwordHash: "",
+      role: "student",
+      status: "active",
+      email_verified: true,
+    });
+
+    user = await userModel.findById(userId);
+
+    // Non-blocking welcome & admin alerts
+    try {
+      emailService
+        .sendWelcomeEmail(user.email, user.full_name)
+        .catch((e) => console.error("[Google Auth] Welcome email error:", e.message));
+      emailService
+        .sendAdminNewStudentEmail({
+          studentName: user.full_name,
+          studentEmail: user.email,
+          role: "student",
+          registeredAt: new Date(),
+        })
+        .catch((e) => console.error("[Google Auth] Admin notification error:", e.message));
+    } catch (e) {
+      console.error("[Google Auth] Notification trigger error:", e.message);
+    }
+  } else {
+    if (user.status === "pending") {
+      throw new ApiError(403, "Your account is pending admin approval.");
+    }
+    if (user.status !== "active") {
+      throw new ApiError(403, "Your account is inactive. Please contact support.");
+    }
+    if (!user.email_verified) {
+      await userModel.markEmailVerified(user.id);
+      user.email_verified = true;
+    }
+  }
+
+  const safeUser = {
+    id: user.id,
+    full_name: user.full_name,
+    email: user.email,
+    role: user.role,
+    status: user.status,
+    email_verified: user.email_verified,
+    created_at: user.created_at,
+  };
+
+  const token = signToken({
+    id: user.id,
+    role: user.role,
+    email: user.email,
+    full_name: user.full_name,
+  });
+
+  return { user: safeUser, token };
+}
+
 module.exports = {
   registerUser,
   loginUser,
+  loginWithGoogleToken,
   forgotPassword,
   resetPassword,
   verifyEmail,

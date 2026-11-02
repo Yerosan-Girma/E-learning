@@ -152,6 +152,9 @@ export const api = {
     request(`/certificates/courses/${courseId}`),
 
   // Auth / Email verification & Password Reset
+  googleLoginWithToken: (credential) =>
+    request("/auth/google-token", { method: "POST", body: { credential } }),
+  checkHealth: () => request("/health"),
   forgotPassword: (email) =>
     request("/auth/forgot-password", { method: "POST", body: { email } }),
   resetPassword: (token, password) =>

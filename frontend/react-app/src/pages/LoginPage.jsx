@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { api } from "../services/api";
@@ -19,21 +19,10 @@ const rawApiBase =
 const normalizedApiBase = rawApiBase.endsWith("/api") ? rawApiBase : `${rawApiBase}/api`;
 
 const GOOGLE_CLIENT_ID = "846651054103-cjr8t8lun9glgpaba7ad8qqsb381v76f.apps.googleusercontent.com";
-const isLocalHost =
-  typeof window !== "undefined" &&
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
-const callbackUrl = isLocalHost
-  ? "http://localhost:5000/api/auth/google/callback"
-  : "https://e-leraning.onrender.com/api/auth/google/callback";
-
-// Direct Google OAuth URL — opens Google sign-in directly, eliminating Render cold-start terminal screen
-const DIRECT_GOOGLE_AUTH_URL = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-  callbackUrl
-)}&scope=profile%20email&prompt=select_account`;
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, signup, notify, isLoggedIn, dashboardPath } = useAuth();
+  const { login, signup, notify, isLoggedIn, dashboardPath, loginWithToken } = useAuth();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
@@ -46,6 +35,7 @@ export default function LoginPage() {
   const [tab, setTab] = useState("signin"); // "signin" | "signup" | "forgot"
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleStatus, setGoogleStatus] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -55,6 +45,117 @@ export default function LoginPage() {
   });
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
+
+  const gisInitializedRef = useRef(false);
+
+  // Proactively ping backend to warm up Render if it's sleeping, and initialize Google Identity Services
+  useEffect(() => {
+    fetch(`${normalizedApiBase}/health`, { mode: "cors" }).catch(() => {});
+
+    const initGis = () => {
+      if (typeof window === "undefined" || !window.google?.accounts?.id || gisInitializedRef.current) return;
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+        gisInitializedRef.current = true;
+      } catch (err) {
+        console.warn("GIS initialization warning:", err.message);
+      }
+    };
+
+    if (typeof window !== "undefined" && window.google?.accounts?.id) {
+      initGis();
+    } else {
+      const interval = setInterval(() => {
+        if (typeof window !== "undefined" && window.google?.accounts?.id) {
+          clearInterval(interval);
+          initGis();
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
+  }, []);
+
+  const handleGoogleCredentialResponse = async (response) => {
+    if (!response?.credential) {
+      notify("Google sign-in did not return valid credentials. Please try again.", "danger");
+      return;
+    }
+
+    setGoogleLoading(true);
+    setGoogleStatus("Authenticating with Google...");
+
+    const wakeNoticeTimer = setTimeout(() => {
+      setGoogleStatus("Connecting to server (waking up Render instance)... Please hold on a moment!");
+    }, 2500);
+
+    try {
+      const result = await api.googleLoginWithToken(response.credential);
+      clearTimeout(wakeNoticeTimer);
+      if (result?.token) {
+        await loginWithToken(result.token);
+      } else {
+        throw new Error("No session token received.");
+      }
+    } catch (err) {
+      clearTimeout(wakeNoticeTimer);
+      setGoogleLoading(false);
+      setGoogleStatus("");
+      notify(err.message || "Failed to sign in with Google", "danger");
+    }
+  };
+
+  const initiateWarmupRedirect = async () => {
+    setGoogleLoading(true);
+    setGoogleStatus("Connecting to server...");
+
+    let isServerAwake = false;
+    try {
+      const res = await fetch(`${normalizedApiBase}/health`, { method: "GET" });
+      if (res.ok) isServerAwake = true;
+    } catch (_) {}
+
+    if (!isServerAwake) {
+      setGoogleStatus("Waking up server (Render free tier cold start)... Please hold on a moment!");
+      for (let i = 0; i < 25; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        try {
+          const res = await fetch(`${normalizedApiBase}/health`, { method: "GET" });
+          if (res.ok) {
+            isServerAwake = true;
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    setGoogleStatus("Redirecting to Google...");
+    const returnOrigin = encodeURIComponent(window.location.origin);
+    window.location.href = `${normalizedApiBase}/auth/google?returnTo=${returnOrigin}`;
+  };
+
+  const handleGoogleClick = async () => {
+    if (googleLoading) return;
+
+    if (typeof window !== "undefined" && window.google?.accounts?.id) {
+      try {
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            initiateWarmupRedirect();
+          }
+        });
+        return;
+      } catch (_) {
+        // Fall back to warm-up redirect
+      }
+    }
+
+    await initiateWarmupRedirect();
+  };
 
   useEffect(() => {
     if (isLoggedIn) navigate(dashboardPath);
@@ -173,29 +274,27 @@ export default function LoginPage() {
                 <>
                   <button
                     type="button"
-                    onClick={() => {
-                      setGoogleLoading(true);
-                      // Ping backend to warm it up in background while user is selecting account on Google
-                      try {
-                        fetch(`${normalizedApiBase}/health`, { mode: "no-cors" }).catch(() => {});
-                      } catch (_) {}
-                      // Direct navigation to Google
-                      window.location.href = DIRECT_GOOGLE_AUTH_URL;
-                    }}
-                    disabled={googleLoading}
-                    className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
+                    onClick={handleGoogleClick}
+                    disabled={googleLoading || loading}
+                    className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3 py-2">
                     {googleLoading ? (
                       <>
                         <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
-                        Connecting to Google...
+                        <span className="small">{googleStatus || "Connecting to Google..."}</span>
                       </>
                     ) : (
                       <>
                         <GoogleIcon />
-                        {tab === "signin" ? "Continue with Google" : "Sign up with Google"}
+                        <span>{tab === "signin" ? "Continue with Google" : "Sign up with Google"}</span>
                       </>
                     )}
                   </button>
+
+                  {googleLoading && googleStatus && (
+                    <div className="alert alert-info py-2 px-3 small text-center mb-3 border-0 rounded-3 shadow-sm" style={{ background: "#eff6ff", color: "#1e40af" }}>
+                      <i className="fas fa-info-circle me-1"></i> {googleStatus}
+                    </div>
+                  )}
 
                   <div className="d-flex align-items-center mb-3">
                     <hr className="flex-grow-1 m-0" />

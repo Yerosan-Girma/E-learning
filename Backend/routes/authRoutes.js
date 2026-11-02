@@ -88,18 +88,69 @@ const getFrontendUrl = (req) => {
   return origins[0] || "http://localhost:5173";
 };
 
+// Helper to resolve return destination from OAuth state or fallback
+const resolveTargetFrontend = (req) => {
+  if (req && req.query && req.query.state) {
+    try {
+      const stateOrigin = decodeURIComponent(req.query.state).trim().replace(/\/+$/, "");
+      const originEnv = process.env.CORS_ORIGIN || "http://localhost:5173";
+      const allowedOrigins = originEnv
+        .split(",")
+        .map((o) => o.trim().replace(/\/+$/, ""))
+        .filter(Boolean);
+
+      if (
+        allowedOrigins.includes(stateOrigin) ||
+        stateOrigin.startsWith("http://localhost:") ||
+        stateOrigin.startsWith("http://127.0.0.1:") ||
+        stateOrigin.endsWith(".vercel.app")
+      ) {
+        return stateOrigin;
+      }
+    } catch (_) {}
+  }
+  return getFrontendUrl(req);
+};
+
+// Client-side Google Token Login endpoint (GIS / Popup flow)
+router.post(
+  "/google-token",
+  [body("credential").notEmpty().withMessage("Google credential is required")],
+  validate,
+  authController.googleTokenLogin
+);
+
+router.post(
+  "/google/token",
+  [body("credential").notEmpty().withMessage("Google credential is required")],
+  validate,
+  authController.googleTokenLogin
+);
+
 // Google OAuth routes (only if configured)
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-  router.get(
-    "/google",
-    passport.authenticate("google", { scope: ["profile", "email"] })
-  );
+  router.get("/google", (req, res, next) => {
+    const returnTo = req.query.returnTo || req.query.state || req.headers.referer || "";
+    let state = "";
+    if (returnTo) {
+      try {
+        const parsed = new URL(returnTo);
+        state = parsed.origin;
+      } catch (_) {
+        state = returnTo;
+      }
+    }
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      state: state || undefined,
+    })(req, res, next);
+  });
 
   router.get(
     "/google/callback",
     (req, res, next) => {
       passport.authenticate("google", {
-        failureRedirect: `${getFrontendUrl(req)}/login?error=google_auth_failed`,
+        failureRedirect: `${resolveTargetFrontend(req)}/login?error=google_auth_failed`,
       })(req, res, next);
     },
     (req, res) => {
@@ -113,7 +164,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       });
 
       // Redirect to frontend callback handler with token
-      res.redirect(`${getFrontendUrl(req)}/auth/callback?token=${token}`);
+      res.redirect(`${resolveTargetFrontend(req)}/auth/callback?token=${token}`);
     }
   );
 } else {

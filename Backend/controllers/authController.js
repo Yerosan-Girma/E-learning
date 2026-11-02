@@ -64,9 +64,16 @@ const resendVerification = asyncHandler(async (req, res) => {
   return sendSuccess(res, {}, result.message);
 });
 
+const googleTokenLogin = asyncHandler(async (req, res) => {
+  const { credential } = req.body;
+  const result = await authService.loginWithGoogleToken(credential);
+  return sendSuccess(res, result, "Login successful with Google");
+});
+
 module.exports = {
   register,
   login,
+  googleTokenLogin,
   getProfile,
   logout,
   forgotPassword,
