@@ -3,11 +3,13 @@ export function formatPrice(value) {
     return "Free";
   }
 
-  return `${Number(value).toLocaleString("en-US")} ETB`;
+  const rounded = Math.round(Number(value));
+  return `${rounded.toLocaleString("en-US")} ETB`;
 }
 
 export function formatCurrency(value) {
-  return `${Number(value || 0).toLocaleString("en-US")} ETB`;
+  const rounded = Math.round(Number(value || 0));
+  return `${rounded.toLocaleString("en-US")} ETB`;
 }
 
 export function formatNumber(value) {

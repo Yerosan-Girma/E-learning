@@ -5,33 +5,6 @@ import { api } from "../services/api";
 import { normalizeCourse } from "../utils/courseAdapter";
 import { formatPrice } from "../utils/format";
 
-const GATEWAYS = [
-  {
-    value: "chapa",
-    label: "Chapa (Telebirr / CBE / Awash / Cards)",
-    badge: "Recommended",
-    badgeColor: "success",
-    icon: "fa-bolt",
-    subtext: "Instant activation via Telebirr, CBE Birr, Awash, or Debit Card in Ethiopian Birr (ETB).",
-  },
-  {
-    value: "telebirr",
-    label: "Telebirr Direct (Simulation)",
-    badge: "Instant",
-    badgeColor: "primary",
-    icon: "fa-mobile-screen-button",
-    subtext: "Simulate an instant Telebirr wallet payment.",
-  },
-  {
-    value: "bank_transfer",
-    label: "Bank Transfer (Manual)",
-    badge: "Manual Verification",
-    badgeColor: "secondary",
-    icon: "fa-building-columns",
-    subtext: "Deposit into CBE, Awash, or BOA account and upload receipt.",
-  },
-];
-
 export default function PaymentPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
@@ -49,10 +22,6 @@ export default function PaymentPage() {
     gateway: "chapa",
     payerName: user?.name || "",
     payerPhone: "",
-    payerReference: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvc: "",
   });
 
   useEffect(() => {
@@ -116,18 +85,9 @@ export default function PaymentPage() {
     }
   }, [user?.name]);
 
-  const isCardGateway = form.gateway === "credit_card" || form.gateway === "debit_card";
-
   const canProceedStep2 = useMemo(() => {
-    if (!form.payerName.trim()) return false;
-    if (form.gateway === "chapa") {
-      return Boolean(form.payerName.trim());
-    }
-    if (isCardGateway) {
-      return form.cardNumber.length >= 12 && form.cardExpiry && form.cardCvc.length >= 3;
-    }
-    return true;
-  }, [form, isCardGateway]);
+    return Boolean(form.payerName && form.payerName.trim());
+  }, [form.payerName]);
 
   // Live background polling while awaiting payment on Chapa
   useEffect(() => {
@@ -460,68 +420,43 @@ export default function PaymentPage() {
 
               {step === 2 && (
                 <div>
-                  <h5 className="fw-bold mb-3">Select Payment Method</h5>
+                  <h5 className="fw-bold mb-3">Chapa Secure Checkout</h5>
 
-                  <div className="d-flex flex-column gap-3 mb-4">
-                    {GATEWAYS.map((gw) => (
-                      <div
-                        key={gw.value}
-                        className={`p-3.5 rounded-4 border cursor-pointer transition-all ${
-                          form.gateway === gw.value
-                            ? "border-primary bg-primary bg-opacity-10 shadow-sm"
-                            : "border-light-subtle bg-white hover-light"
-                        }`}
-                        onClick={() => setForm((p) => ({ ...p, gateway: gw.value }))}
-                        style={{ cursor: "pointer" }}
-                      >
-                        <div className="d-flex align-items-center justify-content-between mb-1">
-                          <div className="d-flex align-items-center gap-2.5">
-                            <input
-                              type="radio"
-                              name="gatewaySelect"
-                              checked={form.gateway === gw.value}
-                              onChange={() => setForm((p) => ({ ...p, gateway: gw.value }))}
-                              className="form-check-input mt-0"
-                            />
-                            <span className="fw-bold text-dark">{gw.label}</span>
-                          </div>
-                          <span className={`badge bg-${gw.badgeColor} rounded-pill px-2.5 py-1 small`}>
-                            {gw.badge}
-                          </span>
+                  <div className="p-4 rounded-4 border bg-light mb-4">
+                    <div className="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                      <div className="d-flex align-items-center gap-2">
+                        <div className="rounded-circle bg-success bg-opacity-10 p-2 text-success d-flex align-items-center justify-content-center" style={{ width: 42, height: 42 }}>
+                          <i className="fas fa-shield-halved fa-lg" />
                         </div>
-                        <p className="text-muted small mb-0 ps-4">
-                          {gw.subtext}
-                        </p>
+                        <div>
+                          <h6 className="fw-bold text-dark mb-0">Chapa Payment Gateway</h6>
+                          <small className="text-muted">Official Ethiopian payment platform in Birr (ETB)</small>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Chapa Information Callout */}
-                  {form.gateway === "chapa" && (
-                    <div className="p-3.5 rounded-4 border bg-light mb-4">
-                      <div className="d-flex align-items-center gap-2 mb-2">
-                        <i className="fas fa-shield-halved text-success fa-lg" />
-                        <h6 className="fw-bold text-dark mb-0">Chapa Multi-Payment Gateway</h6>
-                      </div>
-                      <p className="small text-muted mb-2">
-                        You will be redirected to Chapa's official payment page to pay in Ethiopian Birr (ETB) using:
-                      </p>
-                      <div className="d-flex flex-wrap gap-2 mb-2">
-                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
-                          <i className="fas fa-mobile-screen text-success me-1" /> Telebirr
-                        </span>
-                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
-                          <i className="fas fa-building-columns text-primary me-1" /> CBE Birr
-                        </span>
-                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
-                          <i className="fas fa-university text-warning me-1" /> Awash / BOA / Dashen
-                        </span>
-                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
-                          <i className="fas fa-credit-card text-info me-1" /> Local Debit Cards
-                        </span>
-                      </div>
+                      <span className="badge bg-success rounded-pill px-3 py-1.5 small">
+                        <i className="fas fa-bolt me-1" /> Instant Activation
+                      </span>
                     </div>
-                  )}
+
+                    <p className="small text-muted mb-2">
+                      Pay instantly in Ethiopian Birr using any of the following options on Chapa:
+                    </p>
+
+                    <div className="d-flex flex-wrap gap-2">
+                      <span className="badge bg-white text-dark border px-3 py-2 shadow-sm">
+                        <i className="fas fa-mobile-screen text-success me-1.5" /> Telebirr
+                      </span>
+                      <span className="badge bg-white text-dark border px-3 py-2 shadow-sm">
+                        <i className="fas fa-building-columns text-primary me-1.5" /> CBE Birr
+                      </span>
+                      <span className="badge bg-white text-dark border px-3 py-2 shadow-sm">
+                        <i className="fas fa-university text-warning me-1.5" /> Awash / BOA / Dashen
+                      </span>
+                      <span className="badge bg-white text-dark border px-3 py-2 shadow-sm">
+                        <i className="fas fa-credit-card text-info me-1.5" /> Local Bank Cards
+                      </span>
+                    </div>
+                  </div>
 
                   <div className="row g-3 mb-4">
                     <div className="col-md-6">

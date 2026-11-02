@@ -42,8 +42,14 @@ async function initializeTransaction({
 
   const reference = txRef || generateTxRef();
 
+  // Chapa requires amount to be a whole number in ETB (no decimal cents)
+  const integerAmount = Math.round(Number(amount));
+  if (isNaN(integerAmount) || integerAmount <= 0) {
+    throw new Error("Invalid payment amount");
+  }
+
   const payload = {
-    amount: String(amount),
+    amount: String(integerAmount),
     currency: currency.toUpperCase(),
     email: email || "student@edulearn.com",
     first_name: firstName || "Student",

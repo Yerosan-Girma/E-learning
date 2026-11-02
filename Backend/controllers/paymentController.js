@@ -66,130 +66,66 @@ const initializeCoursePayment = asyncHandler(async (req, res) => {
     );
   }
 
-  const amount = getEffectiveCoursePrice(course);
-  const requestedGateway = (req.body.gateway || "chapa").toLowerCase().trim();
+  const effectivePrice = getEffectiveCoursePrice(course);
+  const amount = Math.round(Number(effectivePrice));
 
-  // If Chapa is requested (or default) and configured, initialize hosted transaction
-  if (requestedGateway === "chapa" && chapaService.isChapaConfigured()) {
-    const txRef = chapaService.generateTxRef("edl");
-    const frontendOrigin = (process.env.CORS_ORIGIN || "https://e-learning-three-phi.vercel.app").split(",")[0].trim();
-    const returnUrl = `${frontendOrigin}/payment/verify?tx_ref=${txRef}&course_id=${courseId}`;
-    const backendOrigin = (process.env.BACKEND_URL || "https://e-leraning.onrender.com").trim();
-    const callbackUrl = `${backendOrigin}/api/payments/chapa/webhook`;
-
-    const studentName = req.body.payerName || req.user.full_name || "Student User";
-    const nameParts = studentName.trim().split(" ");
-    const firstName = nameParts[0] || "Student";
-    const lastName = nameParts.slice(1).join(" ") || "User";
-
-    const chapaRes = await chapaService.initializeTransaction({
-      amount,
-      currency: "ETB",
-      email: req.user.email,
-      firstName,
-      lastName,
-      phoneNumber: req.body.payerPhone,
-      txRef,
-      returnUrl,
-      callbackUrl,
-      title: `EduLearn: ${course.title.slice(0, 30)}`,
-      description: `Course enrollment payment for ID ${courseId}`,
-    });
-
-    const paymentId = await paymentModel.createPayment({
-      userId: req.user.id,
-      courseId,
-      amount,
-      gateway: "chapa",
-      transactionId: txRef,
-      status: "pending",
-      screenshotPath: null,
-      metaJson: {
-        checkoutUrl: chapaRes.checkoutUrl,
-        txRef,
-        payerPhone: req.body.payerPhone || null,
-        payerName: studentName,
-      },
-    });
-
-    return sendSuccess(
-      res,
-      {
-        paymentId,
-        gateway: "chapa",
-        transactionId: txRef,
-        status: "pending",
-        checkoutUrl: chapaRes.checkoutUrl,
-        instructions: "Redirecting to Chapa secure checkout for Telebirr / CBE / Card payment...",
-      },
-      "Chapa payment initialized"
-    );
+  // Exclusively process via Chapa multi-payment gateway
+  if (!chapaService.isChapaConfigured()) {
+    throw new ApiError(503, "Chapa payment gateway is currently unavailable");
   }
 
-  const gatewayPayload = await initializePayment({
-    gateway: req.body.gateway,
+  const txRef = chapaService.generateTxRef("edl");
+  const frontendOrigin = (process.env.CORS_ORIGIN || "https://e-learning-three-phi.vercel.app").split(",")[0].trim();
+  const returnUrl = `${frontendOrigin}/payment/verify?tx_ref=${txRef}&course_id=${courseId}`;
+  const backendOrigin = (process.env.BACKEND_URL || "https://e-leraning.onrender.com").trim();
+  const callbackUrl = `${backendOrigin}/api/payments/chapa/webhook`;
+
+  const studentName = req.body.payerName || req.user.full_name || "Student User";
+  const nameParts = studentName.trim().split(" ");
+  const firstName = nameParts[0] || "Student";
+  const lastName = nameParts.slice(1).join(" ") || "User";
+
+  const chapaRes = await chapaService.initializeTransaction({
     amount,
-    courseId,
-    userId: req.user.id,
-    payerName: req.body.payerName,
-    payerPhone: req.body.payerPhone,
-    payerReference: req.body.payerReference,
+    currency: "ETB",
+    email: req.user.email,
+    firstName,
+    lastName,
+    phoneNumber: req.body.payerPhone,
+    txRef,
+    returnUrl,
+    callbackUrl,
+    title: `EduLearn: ${course.title.slice(0, 30)}`,
+    description: `Course enrollment payment for ID ${courseId}`,
   });
 
   const paymentId = await paymentModel.createPayment({
     userId: req.user.id,
     courseId,
     amount,
-    gateway: gatewayPayload.gateway,
-    transactionId: gatewayPayload.transactionId,
-    status: "completed",
+    gateway: "chapa",
+    transactionId: txRef,
+    status: "pending",
     screenshotPath: null,
     metaJson: {
-      checkoutUrl: gatewayPayload.checkoutUrl,
-      instructions: gatewayPayload.instructions,
-      simulated: true,
-      ...gatewayPayload.meta,
+      checkoutUrl: chapaRes.checkoutUrl,
+      txRef,
+      payerPhone: req.body.payerPhone || null,
+      payerName: studentName,
     },
   });
-
-  await ensureEnrollmentStatus({ userId: req.user.id, courseId, status: "approved" });
-
-  // Send enrollment confirmation email
-  emailService
-    .sendEnrollmentEmail({
-      studentEmail: req.user.email,
-      studentName: req.user.full_name,
-      courseTitle: course.title,
-      courseId: course.id,
-      amount,
-      isFree: false,
-    })
-    .catch((err) => console.error("[Payment] Enrollment email error:", err.message));
-
-  emailService
-    .sendAdminEnrollmentAlert({
-      studentEmail: req.user.email,
-      studentName: req.user.full_name,
-      courseTitle: course.title,
-      courseId: course.id,
-      amount,
-      isFree: false,
-      enrollmentType: "purchase",
-    })
-    .catch((err) => console.error("[Payment] Admin enrollment notification error:", err.message));
 
   return sendSuccess(
     res,
     {
       paymentId,
-      gateway: gatewayPayload.gateway,
-      transactionId: gatewayPayload.transactionId,
-      status: "completed",
-      checkoutUrl: gatewayPayload.checkoutUrl,
-      instructions: gatewayPayload.instructions,
+      gateway: "chapa",
+      transactionId: txRef,
+      status: "pending",
+      checkoutUrl: chapaRes.checkoutUrl,
+      instructions: "Redirecting to Chapa secure checkout for Telebirr / CBE / Card payment...",
     },
-    "Payment completed successfully. You are now enrolled.",
-    201
+    "Chapa payment initialized"
   );
 });
 
