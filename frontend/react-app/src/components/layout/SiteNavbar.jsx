@@ -226,17 +226,7 @@ export default function SiteNavbar() {
                 className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
                 onClick={handleNavAction}
               >
-                Contact
-              </NavLink>
-            </li>
-
-            <li className="nav-item">
-              <NavLink
-                to="/faq"
-                className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}
-                onClick={handleNavAction}
-              >
-                FAQ
+                Contact & FAQ
               </NavLink>
             </li>
           </ul>

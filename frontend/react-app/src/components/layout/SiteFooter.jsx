@@ -113,12 +113,12 @@ export default function SiteFooter() {
             <h6 className="fw-bold text-uppercase text-white small letter-spacing-1 mb-3">Support</h6>
             <ul className="list-unstyled small d-flex flex-column gap-2 mb-0">
               <li>
-                <Link to="/faq" className="text-light text-opacity-75 text-decoration-none hover-white">
+                <Link to="/contact#faq" className="text-light text-opacity-75 text-decoration-none hover-white">
                   FAQ & Help
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-light text-opacity-75 text-decoration-none hover-white">
+                <Link to="/contact#contact-form" className="text-light text-opacity-75 text-decoration-none hover-white">
                   Contact Support
                 </Link>
               </li>

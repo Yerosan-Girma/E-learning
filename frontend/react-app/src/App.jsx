@@ -224,7 +224,7 @@ function AppShell() {
             <Route path="/" element={<HomePage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
-            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/faq" element={<Navigate to="/contact#faq" replace />} />
 
             {/* Courses Exploration & Details */}
             <Route path="/courses" element={<CoursesPage />} />
