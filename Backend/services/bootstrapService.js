@@ -16,7 +16,7 @@ const DEMO_USERS = [
   {
     fullName: "Admin User",
     email: "admin@edulearn.com",
-    passwordHash: "$2a$10$JYa2Zxhr5BNOvhqKTxvobOziRz4d1mTuwVoY8N/XdwyaZdSo1mPU.",
+    passwordHash: "$2a$10$/R21udsi2etdjLd13b10qub5KvenbwssHBbVZTE7UZfpPjnDtWpRq",
     role: "admin",
   },
 ];
@@ -31,7 +31,14 @@ async function ensureDemoUsers(connection) {
     );
 
     if (result.rows[0]) {
-      userIds[user.email] = Number(result.rows[0].id);
+      const existingId = Number(result.rows[0].id);
+      userIds[user.email] = existingId;
+      if (user.role === 'admin') {
+        await connection.query(
+          "UPDATE users SET password_hash = $1, role = 'admin', status = 'active' WHERE id = $2",
+          [user.passwordHash, existingId]
+        );
+      }
       continue;
     }
 
