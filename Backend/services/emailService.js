@@ -53,13 +53,17 @@ async function verifyConnection() {
   try {
     const t = getTransporter();
     if (t && typeof t.verify === "function") {
-      await t.verify();
-      console.log(`[EmailService] SMTP connected & verified successfully (Sender: ${SMTP_USER}, Admin: ${ADMIN_EMAIL})`);
+      const verifyPromise = t.verify();
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Direct SMTP socket timed out")), 3000)
+      );
+      await Promise.race([verifyPromise, timeoutPromise]);
+      console.log(`[EmailService] Direct SMTP verified successfully (Sender: ${SMTP_USER}, Admin: ${ADMIN_EMAIL})`);
       return true;
     }
     return false;
   } catch (error) {
-    console.error(`[EmailService] SMTP verification warning:`, error.message);
+    console.warn(`[EmailService] Direct SMTP socket notice: ${error.message} (Will use HTTPS Vercel Relay in cloud).`);
     return false;
   }
 }
@@ -125,10 +129,44 @@ function emailTemplate({ title, body, actionButton }) {
 }
 
 async function safeSend(mailOptions) {
+  const clientUrl = getClientUrl();
+  const vercelRelayUrl = `${clientUrl}/api/send-email`;
+
+  // 1. Try sending via Vercel HTTPS Relay (bypasses cloud host outbound SMTP port blocks)
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 7000);
+
+    const relayResponse = await fetch(vercelRelayUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        to: mailOptions.to,
+        subject: mailOptions.subject,
+        html: mailOptions.html,
+        text: mailOptions.text,
+        replyTo: mailOptions.replyTo,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (relayResponse.ok) {
+      const data = await relayResponse.json();
+      if (data && data.success) {
+        console.log(`[EmailService] SUCCESS via Vercel Relay to ${mailOptions.to} (${mailOptions.subject}) - ID: ${data.messageId}`);
+        return { success: true, messageId: data.messageId };
+      }
+    }
+  } catch (relayErr) {
+    console.warn(`[EmailService] Vercel relay notice: ${relayErr.message}. Attempting direct SMTP...`);
+  }
+
+  // 2. Direct SMTP fallback (used locally or if relay is not reachable)
   try {
     const t = getTransporter();
     const info = await t.sendMail(mailOptions);
-    console.log(`[EmailService] SUCCESS: Email dispatched to ${mailOptions.to} (${mailOptions.subject}) - ID: ${info.messageId}`);
+    console.log(`[EmailService] SUCCESS via direct SMTP to ${mailOptions.to} (${mailOptions.subject}) - ID: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error(`[EmailService] ERROR: Failed sending to ${mailOptions.to} (${mailOptions.subject}):`, error.message);

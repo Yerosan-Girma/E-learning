@@ -168,6 +168,22 @@ export const api = {
     request("/auth/resend-verification", { method: "POST", body: { email } }),
 
   // Contact form submission
-  submitContactForm: (data) =>
-    request("/contact", { method: "POST", body: data }),
+  submitContactForm: async (data) => {
+    // 1. Try Vercel Serverless Email Relay first (immediate delivery over HTTPS, no sleeping backend delay)
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (_) {
+      // In local dev without Vercel serverless, fall through to backend
+    }
+
+    // 2. Fall back to backend Express contact endpoint
+    return request("/contact", { method: "POST", body: data });
+  },
 };

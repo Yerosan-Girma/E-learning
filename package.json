@@ -1,0 +1,12 @@
+{
+  "name": "edulearn-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "EduLearn Platform monorepo root",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  }
+}
