@@ -115,15 +115,11 @@ const resolveTargetFrontend = (req) => {
 // Client-side Google Token Login endpoint (GIS / Popup flow)
 router.post(
   "/google-token",
-  [body("credential").notEmpty().withMessage("Google credential is required")],
-  validate,
   authController.googleTokenLogin
 );
 
 router.post(
   "/google/token",
-  [body("credential").notEmpty().withMessage("Google credential is required")],
-  validate,
   authController.googleTokenLogin
 );
 

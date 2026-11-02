@@ -152,8 +152,11 @@ export const api = {
     request(`/certificates/courses/${courseId}`),
 
   // Auth / Email verification & Password Reset
-  googleLoginWithToken: (credential) =>
-    request("/auth/google-token", { method: "POST", body: { credential } }),
+  googleLoginWithToken: (payload) =>
+    request("/auth/google-token", {
+      method: "POST",
+      body: typeof payload === "string" ? { token: payload } : payload,
+    }),
   checkHealth: () => request("/health"),
   forgotPassword: (email) =>
     request("/auth/forgot-password", { method: "POST", body: { email } }),

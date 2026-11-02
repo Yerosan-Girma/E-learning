@@ -109,52 +109,65 @@ export default function LoginPage() {
     }
   };
 
-  const initiateWarmupRedirect = async () => {
+  const redirectToGoogleDirect = () => {
     setGoogleLoading(true);
-    setGoogleStatus("Connecting to server...");
-
-    let isServerAwake = false;
-    try {
-      const res = await fetch(`${normalizedApiBase}/health`, { method: "GET" });
-      if (res.ok) isServerAwake = true;
-    } catch (_) {}
-
-    if (!isServerAwake) {
-      setGoogleStatus("Waking up server (Render free tier cold start)... Please hold on a moment!");
-      for (let i = 0; i < 25; i++) {
-        await new Promise((r) => setTimeout(r, 2000));
-        try {
-          const res = await fetch(`${normalizedApiBase}/health`, { method: "GET" });
-          if (res.ok) {
-            isServerAwake = true;
-            break;
-          }
-        } catch (_) {}
-      }
-    }
-
-    setGoogleStatus("Redirecting to Google...");
+    setGoogleStatus("Opening Google sign-in...");
     const returnOrigin = encodeURIComponent(window.location.origin);
-    window.location.href = `${normalizedApiBase}/auth/google?returnTo=${returnOrigin}`;
+    const directGoogleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+      "https://e-leraning.onrender.com/api/auth/google/callback"
+    )}&scope=profile%20email&prompt=select_account&state=${returnOrigin}`;
+
+    window.location.href = directGoogleAuthUrl;
   };
 
-  const handleGoogleClick = async () => {
+  const handleGoogleClick = () => {
     if (googleLoading) return;
 
-    if (typeof window !== "undefined" && window.google?.accounts?.id) {
+    // Ping backend in background to warm up for token verification / callback
+    try {
+      fetch(`${normalizedApiBase}/health`, { mode: "no-cors" }).catch(() => {});
+    } catch (_) {}
+
+    // Option 1: Modern Google OAuth Popup Client (no page reload, zero redirect screen)
+    if (typeof window !== "undefined" && window.google?.accounts?.oauth2) {
       try {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            initiateWarmupRedirect();
-          }
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: GOOGLE_CLIENT_ID,
+          scope: "email profile openid",
+          callback: async (tokenResponse) => {
+            if (tokenResponse?.access_token) {
+              setGoogleLoading(true);
+              setGoogleStatus("Authenticating with Google...");
+              try {
+                const result = await api.googleLoginWithToken({ access_token: tokenResponse.access_token });
+                if (result?.token) {
+                  await loginWithToken(result.token);
+                } else {
+                  throw new Error("No session token received.");
+                }
+              } catch (err) {
+                setGoogleLoading(false);
+                setGoogleStatus("");
+                notify(err.message || "Failed to sign in with Google", "danger");
+              }
+            } else if (tokenResponse?.error) {
+              console.warn("Google popup error:", tokenResponse.error);
+              redirectToGoogleDirect();
+            }
+          },
+          error_callback: () => {
+            redirectToGoogleDirect();
+          },
         });
+        tokenClient.requestAccessToken({ prompt: "select_account" });
         return;
-      } catch (_) {
-        // Fall back to warm-up redirect
+      } catch (err) {
+        console.warn("Could not open Google popup, falling back to direct sign-in:", err);
       }
     }
 
-    await initiateWarmupRedirect();
+    // Option 2: Fallback — direct navigation to Google (NEVER to Render!)
+    redirectToGoogleDirect();
   };
 
   useEffect(() => {

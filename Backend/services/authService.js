@@ -191,28 +191,52 @@ async function resendVerification({ email }) {
   return { message: "If your email is registered, a new verification link has been sent." };
 }
 
-async function loginWithGoogleToken(credential) {
-  if (!credential) {
-    throw new ApiError(400, "Google credential token is required");
+async function loginWithGoogleToken(tokenPayload) {
+  if (!tokenPayload) {
+    throw new ApiError(400, "Google token is required");
   }
 
-  // Verify the ID token via Google's official tokeninfo endpoint
-  let googleUser;
-  try {
-    const response = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`
-    );
-    if (!response.ok) {
-      const errBody = await response.json().catch(() => ({}));
-      throw new Error(errBody.error_description || `Google verification failed (HTTP ${response.status})`);
-    }
-    googleUser = await response.json();
-  } catch (err) {
-    throw new ApiError(401, `Invalid Google credential: ${err.message}`);
+  const rawToken =
+    typeof tokenPayload === "object"
+      ? tokenPayload.credential || tokenPayload.token || tokenPayload.access_token
+      : tokenPayload;
+
+  if (!rawToken || typeof rawToken !== "string") {
+    throw new ApiError(400, "Invalid Google token format");
+  }
+
+  let googleUser = null;
+
+  // 1. If it looks like a JWT ID token (has dots), try Google's tokeninfo endpoint first
+  if (rawToken.includes(".")) {
+    try {
+      const response = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(rawToken)}`
+      );
+      if (response.ok) {
+        googleUser = await response.json();
+      }
+    } catch (_) {}
+  }
+
+  // 2. If not a valid ID token, try Google's userinfo endpoint (for OAuth2 access tokens)
+  if (!googleUser || !googleUser.email) {
+    try {
+      const response = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: { Authorization: `Bearer ${rawToken}` },
+      });
+      if (response.ok) {
+        googleUser = await response.json();
+      }
+    } catch (_) {}
+  }
+
+  if (!googleUser || !googleUser.email) {
+    throw new ApiError(401, "Google verification failed: Invalid or expired token");
   }
 
   const expectedClientId = process.env.GOOGLE_CLIENT_ID;
-  if (expectedClientId && googleUser.aud !== expectedClientId) {
+  if (expectedClientId && googleUser.aud && googleUser.aud !== expectedClientId) {
     throw new ApiError(401, "Google token audience mismatch");
   }
 

@@ -65,8 +65,8 @@ const resendVerification = asyncHandler(async (req, res) => {
 });
 
 const googleTokenLogin = asyncHandler(async (req, res) => {
-  const { credential } = req.body;
-  const result = await authService.loginWithGoogleToken(credential);
+  const tokenPayload = req.body.credential || req.body.token || req.body.access_token || req.body;
+  const result = await authService.loginWithGoogleToken(tokenPayload);
   return sendSuccess(res, result, "Login successful with Google");
 });
 
