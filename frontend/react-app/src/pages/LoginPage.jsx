@@ -33,6 +33,7 @@ export default function LoginPage() {
 
   const [tab, setTab] = useState("signin"); // "signin" | "signup" | "forgot"
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -158,11 +159,26 @@ export default function LoginPage() {
               {/* Google */}
               {tab !== "forgot" && (
                 <>
-                  <a href={GOOGLE_AUTH_URL}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGoogleLoading(true);
+                      window.location.href = GOOGLE_AUTH_URL;
+                    }}
+                    disabled={googleLoading}
                     className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
-                    <GoogleIcon />
-                    {tab === "signin" ? "Continue with Google" : "Sign up with Google"}
-                  </a>
+                    {googleLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                        Connecting to Google...
+                      </>
+                    ) : (
+                      <>
+                        <GoogleIcon />
+                        {tab === "signin" ? "Continue with Google" : "Sign up with Google"}
+                      </>
+                    )}
+                  </button>
 
                   <div className="d-flex align-items-center mb-3">
                     <hr className="flex-grow-1 m-0" />

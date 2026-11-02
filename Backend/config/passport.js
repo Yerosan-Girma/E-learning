@@ -55,8 +55,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
           // Create new user
           const newUser = await pool.query(
-            `INSERT INTO users (full_name, email, password_hash, role, status) 
-             VALUES ($1, $2, $3, $4, 'active') 
+            `INSERT INTO users (full_name, email, password_hash, role, status, email_verified) 
+             VALUES ($1, $2, $3, $4, 'active', true) 
              RETURNING *`,
             [
               fullName,
@@ -66,7 +66,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
             ]
           );
 
-          done(null, newUser.rows[0]);
+          const createdUser = newUser.rows[0];
+
+          // Trigger Welcome and Admin notification emails for new Google signups
+          try {
+            const emailService = require('../services/emailService');
+            emailService.sendWelcomeEmail(createdUser.email, createdUser.full_name)
+              .catch(e => console.error('[Google OAuth] Welcome email error:', e.message));
+            emailService.sendAdminNewStudentEmail({
+              studentName: createdUser.full_name,
+              studentEmail: createdUser.email,
+              role: 'student',
+              registeredAt: new Date(),
+            }).catch(e => console.error('[Google OAuth] Admin notification error:', e.message));
+          } catch (e) {
+            console.error('[Google OAuth] Failed to trigger email notification:', e.message);
+          }
+
+          done(null, createdUser);
         } catch (error) {
           done(error, null);
         }
