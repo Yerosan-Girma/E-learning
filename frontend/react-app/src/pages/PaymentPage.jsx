@@ -110,7 +110,7 @@ export default function PaymentPage() {
 
   if (loading) {
     return (
-      <div className="container py-5 mt-5">
+      <div className="container py-4 py-lg-5">
         <div className="alert alert-info">Loading payment details...</div>
       </div>
     );
@@ -121,7 +121,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-4 py-lg-5">
       <nav aria-label="breadcrumb" className="mb-4">
         <ol className="breadcrumb">
           <li className="breadcrumb-item"><Link to="/">Home</Link></li>

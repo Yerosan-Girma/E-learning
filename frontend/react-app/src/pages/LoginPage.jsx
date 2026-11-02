@@ -237,25 +237,35 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-lg-5 col-xl-4">
-          <div className="card shadow-lg border-0">
-            <div className="card-body p-4 p-md-5">
+        <div className="col-sm-10 col-md-8 col-lg-5 col-xl-4">
+          <div className="card shadow-sm border rounded-4 bg-white">
+            <div className="card-body p-4 p-md-4">
 
               {/* Logo */}
               <div className="text-center mb-4">
-                <Link to="/" className="text-decoration-none">
-                  <span className="fw-bold fs-4 text-primary">
-                    <i className="fas fa-graduation-cap me-2" />EduLearn
+                <Link to="/" className="text-decoration-none d-inline-flex align-items-center gap-2">
+                  <div
+                    className="d-flex align-items-center justify-content-center text-white rounded-3 shadow-sm"
+                    style={{
+                      width: "38px",
+                      height: "38px",
+                      background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    }}
+                  >
+                    <i className="fas fa-graduation-cap" style={{ fontSize: "1.1rem" }} />
+                  </div>
+                  <span className="fw-bold fs-4 text-dark tracking-tight">
+                    Edu<span className="text-primary">Learn</span>
                   </span>
                 </Link>
                 <p className="text-muted small mt-2 mb-0">
                   {tab === "signin"
-                    ? "Sign in to your account"
+                    ? "Welcome back! Sign in to continue learning"
                     : tab === "signup"
-                    ? "Create your account"
-                    : "Reset your password"}
+                    ? "Create your account and start exploring"
+                    : "Reset your account password"}
                 </p>
               </div>
 

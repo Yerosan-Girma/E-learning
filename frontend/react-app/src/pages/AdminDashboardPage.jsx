@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-4 py-lg-5">
       <div className="mb-4">
         <h2 className="fw-bold mb-1">Admin Dashboard</h2>
         <p className="text-muted mb-0">

@@ -1,58 +1,66 @@
 import React from "react";
-import { Award, Download, Calendar, CheckCircle } from "lucide-react";
+import { Award, Download, Calendar, CheckCircle, ExternalLink } from "lucide-react";
 
 export default function CertificateCard({ certificate, onView, onDownload }) {
+  const issueDateFormatted = certificate?.issue_date
+    ? new Date(certificate.issue_date).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "Recently issued";
+
   return (
-    <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Award className="w-6 h-6 text-white" />
-            <h3 className="text-white font-semibold text-lg">Certificate</h3>
-          </div>
-          <span className="bg-white/20 text-white text-xs px-2 py-1 rounded-full">
-            Verified
-          </span>
+    <div className="card certificate-card h-100 shadow-sm border-0">
+      <div className="certificate-card-header d-flex align-items-center justify-content-between">
+        <div className="d-flex align-items-center gap-2">
+          <Award className="text-warning" size={22} />
+          <h6 className="text-white fw-bold mb-0">Verified Certificate</h6>
         </div>
+        <span className="badge bg-white bg-opacity-25 text-white px-2 py-1 rounded-pill small">
+          Official
+        </span>
       </div>
 
-      <div className="p-4">
-        <h4 className="font-bold text-gray-800 text-lg mb-2">
+      <div className="card-body p-4 d-flex flex-column">
+        <h5 className="card-title fw-bold text-dark mb-3 text-truncate-2" title={certificate.course_title}>
           {certificate.course_title}
-        </h4>
-        
-        <div className="space-y-2 text-sm text-gray-600 mb-4">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <span>
-              Issued: {new Date(certificate.issue_date).toLocaleDateString()}
-            </span>
+        </h5>
+
+        <div className="small text-muted mb-4 d-flex flex-column gap-2">
+          <div className="d-flex align-items-center gap-2">
+            <Calendar size={16} className="text-primary flex-shrink-0" />
+            <span>Issued: {issueDateFormatted}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="w-4 h-4 text-green-600" />
-            <span>
-              Certificate #: {certificate.certificate_number}
+          <div className="d-flex align-items-center gap-2">
+            <CheckCircle size={16} className="text-success flex-shrink-0" />
+            <span className="text-truncate">
+              ID: <code className="text-dark bg-light px-1 py-0.5 rounded">{certificate.certificate_number}</code>
             </span>
           </div>
           {certificate.instructor_name && (
-            <div className="text-gray-500">
-              Instructor: {certificate.instructor_name}
+            <div className="text-muted text-truncate ps-1 border-start border-2 border-primary-subtle">
+              Instructor: <strong>{certificate.instructor_name}</strong>
             </div>
           )}
         </div>
 
-        <div className="flex gap-2">
+        <div className="d-flex gap-2 mt-auto">
           <button
+            type="button"
             onClick={() => onView(certificate)}
-            className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+            className="btn btn-primary btn-sm flex-grow-1 d-flex align-items-center justify-content-center gap-2"
           >
-            View Certificate
+            <ExternalLink size={16} />
+            <span>View Certificate</span>
           </button>
           <button
+            type="button"
             onClick={() => onDownload(certificate)}
-            className="flex items-center justify-center gap-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
+            className="btn btn-outline-secondary btn-sm px-3 d-flex align-items-center justify-content-center"
+            title="Download Certificate"
           >
-            <Download className="w-4 h-4" />
+            <Download size={16} />
           </button>
         </div>
       </div>

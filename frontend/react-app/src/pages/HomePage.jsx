@@ -90,58 +90,97 @@ export default function HomePage() {
 
   return (
     <>
-      <section className="hero-section py-5 mt-5">
-        <div className="container py-5">
-          <div className="row align-items-center">
+      <section className="hero-section py-4 py-lg-5">
+        <div className="container py-3 py-lg-4">
+          <div className="row align-items-center g-5">
             <div className="col-lg-6">
-              <h1 className="display-4 fw-bold mb-4">
+              <div className="d-inline-flex align-items-center gap-2 px-3 py-1.5 rounded-pill bg-primary bg-opacity-10 text-primary small fw-semibold mb-3">
+                <i className="fas fa-sparkles text-primary" />
+                <span>Modern, Self-Paced E-Learning Platform</span>
+              </div>
+              <h1 className="display-4 fw-bold mb-3 tracking-tight">
                 Learn Anything, <span className="text-primary">Anytime</span>, Anywhere
               </h1>
-              <p className="lead mb-4">
-                Join 50,000+ students from around the world. Master new skills with expert-led courses and interactive learning experiences.
+              <p className="lead text-muted mb-4 fs-5" style={{ lineHeight: "1.6" }}>
+                Join thousands of students mastering top skills with expert-led courses, interactive quizzes, and verified graduation certificates.
               </p>
-              <div className="d-flex flex-wrap gap-3">
-                <Link to="/courses" className="btn btn-primary btn-lg px-4">
-                  <i className="fas fa-play-circle me-2" /> Start Learning Free
+              <div className="d-flex flex-wrap gap-3 mb-4">
+                <Link to="/courses" className="btn btn-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                  <i className="fas fa-play-circle" />
+                  <span>Start Learning Free</span>
                 </Link>
-                <a href="#courses" className="btn btn-outline-primary btn-lg px-4">
-                  <i className="fas fa-eye me-2" /> Browse Courses
+                <a href="#courses" className="btn btn-outline-primary btn-lg px-4 d-flex align-items-center justify-content-center gap-2">
+                  <i className="fas fa-compass" />
+                  <span>Browse Courses</span>
                 </a>
               </div>
-              <div className="mt-4">
-                <small className="text-muted">
-                  <i className="fas fa-check-circle text-success me-2" /> No credit card required
-                </small>
-                <small className="text-muted ms-3">
-                  <i className="fas fa-check-circle text-success me-2" /> 7-day free trial
-                </small>
+              <div className="d-flex flex-wrap align-items-center gap-4 text-muted small pt-2">
+                <div className="d-flex align-items-center gap-2">
+                  <i className="fas fa-check-circle text-success" />
+                  <span>Free enrollment option</span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <i className="fas fa-check-circle text-success" />
+                  <span>Verified credentials</span>
+                </div>
+                <div className="d-flex align-items-center gap-2">
+                  <i className="fas fa-check-circle text-success" />
+                  <span>Learn at your own pace</span>
+                </div>
               </div>
             </div>
             <div className="col-lg-6">
-              <img src="/images/onlineimage.avif" alt="Online Learning" className="img-fluid rounded shadow-lg" />
+              <div className="position-relative">
+                <img
+                  src="/images/onlineimage.avif"
+                  alt="Online Learning"
+                  className="img-fluid rounded-4 shadow-lg border w-100"
+                  style={{ maxHeight: "440px", objectFit: "cover" }}
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="stats-section py-5 bg-light">
+      <section className="stats-section py-4 py-lg-5 bg-white border-bottom">
         <div className="container">
-          <div className="row text-center">
-            <div className="col-md-3 col-6 mb-4">
-              <h2 className="display-4 fw-bold text-primary">{formattedStats.students}</h2>
-              <p className="text-muted">Active Students</p>
+          <div className="row g-4 text-center">
+            <div className="col-6 col-lg-3">
+              <div className="p-3 rounded-4 bg-light h-100 d-flex flex-column align-items-center justify-content-center border">
+                <div className="stat-icon-wrapper bg-primary bg-opacity-10 text-primary mb-2">
+                  <i className="fas fa-users" />
+                </div>
+                <h2 className="fw-bold text-dark mb-1">{formattedStats.students}</h2>
+                <span className="text-muted small fw-medium">Active Students</span>
+              </div>
             </div>
-            <div className="col-md-3 col-6 mb-4">
-              <h2 className="display-4 fw-bold text-primary">{formattedStats.courses}</h2>
-              <p className="text-muted">Online Courses</p>
+            <div className="col-6 col-lg-3">
+              <div className="p-3 rounded-4 bg-light h-100 d-flex flex-column align-items-center justify-content-center border">
+                <div className="stat-icon-wrapper bg-success bg-opacity-10 text-success mb-2">
+                  <i className="fas fa-book-open" />
+                </div>
+                <h2 className="fw-bold text-dark mb-1">{formattedStats.courses}</h2>
+                <span className="text-muted small fw-medium">Online Courses</span>
+              </div>
             </div>
-            <div className="col-md-3 col-6 mb-4">
-              <h2 className="display-4 fw-bold text-primary">{formattedStats.instructors}</h2>
-              <p className="text-muted">Expert Instructors</p>
+            <div className="col-6 col-lg-3">
+              <div className="p-3 rounded-4 bg-light h-100 d-flex flex-column align-items-center justify-content-center border">
+                <div className="stat-icon-wrapper bg-warning bg-opacity-10 text-warning mb-2">
+                  <i className="fas fa-chalkboard-user" />
+                </div>
+                <h2 className="fw-bold text-dark mb-1">{formattedStats.instructors}</h2>
+                <span className="text-muted small fw-medium">Expert Instructors</span>
+              </div>
             </div>
-            <div className="col-md-3 col-6 mb-4">
-              <h2 className="display-4 fw-bold text-primary">{formattedStats.countries}</h2>
-              <p className="text-muted">Countries</p>
+            <div className="col-6 col-lg-3">
+              <div className="p-3 rounded-4 bg-light h-100 d-flex flex-column align-items-center justify-content-center border">
+                <div className="stat-icon-wrapper bg-info bg-opacity-10 text-info mb-2">
+                  <i className="fas fa-earth-americas" />
+                </div>
+                <h2 className="fw-bold text-dark mb-1">{formattedStats.countries}</h2>
+                <span className="text-muted small fw-medium">Countries Reached</span>
+              </div>
             </div>
           </div>
         </div>
@@ -149,23 +188,25 @@ export default function HomePage() {
 
       <section id="courses" className="courses-section py-5">
         <div className="container">
-          <div className="row mb-5">
-            <div className="col-12 text-center">
-              <h2 className="fw-bold mb-3">Featured Courses</h2>
-              <p className="text-muted">Start learning from world-class instructors</p>
+          <div className="row mb-4 align-items-end justify-content-between">
+            <div className="col-md-8">
+              <span className="badge bg-primary bg-opacity-10 text-primary px-3 py-1.5 rounded-pill small fw-semibold mb-2">
+                Handpicked Curriculum
+              </span>
+              <h2 className="fw-bold mb-1">Featured Courses</h2>
+              <p className="text-muted mb-0">Start learning from world-class instructors today</p>
+            </div>
+            <div className="col-md-4 text-md-end mt-3 mt-md-0">
+              <Link to="/courses" className="btn btn-outline-primary rounded-pill px-3">
+                View All Courses <i className="fas fa-arrow-right ms-1" />
+              </Link>
             </div>
           </div>
 
           <div className="row">
             {FEATURED_COURSES.map((course) => (
-              <CourseCard key={course.id} course={course} />
+              <CourseCard key={course.id} course={course} columnClass="col-md-6 col-lg-4 mb-4" />
             ))}
-          </div>
-
-          <div className="text-center mt-4">
-            <Link to="/courses" className="btn btn-outline-primary btn-lg">
-              View All Courses <i className="fas fa-arrow-right ms-2" />
-            </Link>
           </div>
         </div>
       </section>
@@ -413,38 +454,64 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="row">
-            <div className="col-lg-6 mb-4">
-              <div className="card border-0 h-100">
+          <div className="row g-4">
+            <div className="col-lg-6">
+              <div className="card border rounded-4 shadow-sm h-100 p-2">
                 <div className="card-body">
-                  <h5 className="fw-bold mb-3">How do I enroll in a course?</h5>
-                  <p className="text-muted mb-0">
-                    Open any course details page and click Enroll. Free courses enroll instantly; paid courses go through payment verification.
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="stat-icon-wrapper bg-primary bg-opacity-10 text-primary" style={{ width: "36px", height: "36px", fontSize: "1rem" }}>
+                      <i className="fas fa-arrow-right-to-bracket" />
+                    </div>
+                    <h5 className="fw-bold mb-0">How do I enroll in a course?</h5>
+                  </div>
+                  <p className="text-muted mb-0 small" style={{ lineHeight: "1.6" }}>
+                    Open any course details page and click Enroll. Free courses enroll instantly; paid courses go through a quick simulated payment verification.
                   </p>
                 </div>
               </div>
             </div>
-            <div className="col-lg-6 mb-4">
-              <div className="card border-0 h-100">
+            <div className="col-lg-6">
+              <div className="card border rounded-4 shadow-sm h-100 p-2">
                 <div className="card-body">
-                  <h5 className="fw-bold mb-3">Can I get a refund?</h5>
-                  <p className="text-muted mb-0">Yes, paid enrollments include a 30-day money-back guarantee.</p>
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="stat-icon-wrapper bg-success bg-opacity-10 text-success" style={{ width: "36px", height: "36px", fontSize: "1rem" }}>
+                      <i className="fas fa-shield-halved" />
+                    </div>
+                    <h5 className="fw-bold mb-0">Can I get a refund?</h5>
+                  </div>
+                  <p className="text-muted mb-0 small" style={{ lineHeight: "1.6" }}>
+                    Yes, all paid course enrollments include a 30-day money-back guarantee with zero cancellation fees.
+                  </p>
                 </div>
               </div>
             </div>
-            <div className="col-lg-6 mb-4">
-              <div className="card border-0 h-100">
+            <div className="col-lg-6">
+              <div className="card border rounded-4 shadow-sm h-100 p-2">
                 <div className="card-body">
-                  <h5 className="fw-bold mb-3">How do I access my courses?</h5>
-                  <p className="text-muted mb-0">Visit your dashboard to access enrolled courses and progress.</p>
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="stat-icon-wrapper bg-info bg-opacity-10 text-info" style={{ width: "36px", height: "36px", fontSize: "1rem" }}>
+                      <i className="fas fa-play" />
+                    </div>
+                    <h5 className="fw-bold mb-0">How do I access my course materials?</h5>
+                  </div>
+                  <p className="text-muted mb-0 small" style={{ lineHeight: "1.6" }}>
+                    Visit your Student Dashboard anytime to stream video lectures, view lesson notes, take practice quizzes, and download resources.
+                  </p>
                 </div>
               </div>
             </div>
-            <div className="col-lg-6 mb-4">
-              <div className="card border-0 h-100">
+            <div className="col-lg-6">
+              <div className="card border rounded-4 shadow-sm h-100 p-2">
                 <div className="card-body">
-                  <h5 className="fw-bold mb-3">Do you offer certificates?</h5>
-                  <p className="text-muted mb-0">Yes, certificates are available after eligible course completion.</p>
+                  <div className="d-flex align-items-center gap-2 mb-2">
+                    <div className="stat-icon-wrapper bg-warning bg-opacity-10 text-warning" style={{ width: "36px", height: "36px", fontSize: "1rem" }}>
+                      <i className="fas fa-award" />
+                    </div>
+                    <h5 className="fw-bold mb-0">Do you offer verified certificates?</h5>
+                  </div>
+                  <p className="text-muted mb-0 small" style={{ lineHeight: "1.6" }}>
+                    Yes! Once you complete 100% of the lessons and pass the required assessments, an official verified certificate is generated in your dashboard.
+                  </p>
                 </div>
               </div>
             </div>

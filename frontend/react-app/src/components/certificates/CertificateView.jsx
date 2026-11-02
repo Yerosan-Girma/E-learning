@@ -1,94 +1,146 @@
-import React from "react";
-import { Award, X, Download, Share2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Award, X, Download, Share2, Check } from "lucide-react";
 
 export default function CertificateView({ certificate, onClose, onDownload }) {
+  const [copied, setCopied] = useState(false);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  if (!certificate) return null;
+
+  const handleShare = () => {
+    const url = `${window.location.origin}/verify-certificate/${certificate.verification_code || certificate.certificate_number}`;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  };
+
+  const formattedDate = certificate.issue_date
+    ? new Date(certificate.issue_date).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      })
+    : "Verified on record";
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">Certificate</h2>
+    <div
+      className="certificate-modal-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="certificate-modal-dialog">
+        {/* Modal Top Bar */}
+        <div className="d-flex align-items-center justify-content-between p-3 border-bottom bg-white sticky-top rounded-top-4">
+          <div className="d-flex align-items-center gap-2">
+            <Award className="text-warning" size={24} />
+            <h5 className="fw-bold mb-0 text-dark">Official Certificate</h5>
+          </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="btn btn-sm btn-outline-secondary rounded-circle p-1 d-flex align-items-center justify-content-center"
+            style={{ width: "32px", height: "32px" }}
+            aria-label="Close"
           >
-            <X className="w-5 h-5 text-gray-600" />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="p-8">
-          <div className="border-8 border-double border-blue-600 p-8 bg-gradient-to-br from-blue-50 to-purple-50">
-            <div className="text-center space-y-6">
-              <div className="flex justify-center">
-                <Award className="w-16 h-16 text-blue-600" />
-              </div>
+        {/* Modal Body: Certificate Document */}
+        <div className="p-4 p-md-5 bg-light">
+          <div className="certificate-paper text-center">
+            {/* Seal Icon */}
+            <div className="certificate-seal mx-auto">
+              <Award size={38} className="text-white" />
+            </div>
 
-              <div>
-                <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                  Certificate of Completion
-                </h1>
-                <p className="text-gray-600">This is to certify that</p>
-              </div>
+            <div className="mb-4">
+              <p className="text-uppercase text-muted fw-bold mb-1 letter-spacing-1 small">
+                EduLearn Academic Credential
+              </p>
+              <h2 className="fw-bold text-dark mb-2">Certificate of Completion</h2>
+              <p className="text-muted fst-italic mb-0">This is to proudly certify that</p>
+            </div>
 
-              <div className="py-4">
-                <h2 className="text-2xl font-bold text-blue-800">
-                  {certificate.student_name}
-                </h2>
-              </div>
+            {/* Recipient Name */}
+            <div className="my-3 py-2 border-bottom border-top border-primary-subtle d-inline-block px-5">
+              <h3 className="fw-bold text-primary mb-0" style={{ letterSpacing: "-0.01em" }}>
+                {certificate.student_name || "Valued Learner"}
+              </h3>
+            </div>
 
-              <div className="text-gray-700 space-y-2">
-                <p>has successfully completed the course</p>
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {certificate.course_title}
-                </h3>
-              </div>
-
+            <div className="mt-3 mb-4">
+              <p className="text-muted mb-1">has successfully completed all required modules and assessments for</p>
+              <h4 className="fw-bold text-dark mb-2">{certificate.course_title}</h4>
               {certificate.instructor_name && (
-                <div className="text-gray-600">
-                  <p>Instructor: {certificate.instructor_name}</p>
-                </div>
-              )}
-
-              <div className="flex justify-between items-center pt-6 border-t border-gray-300">
-                <div className="text-left">
-                  <p className="text-sm text-gray-600">Issue Date</p>
-                  <p className="font-semibold text-gray-800">
-                    {new Date(certificate.issue_date).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Certificate Number</p>
-                  <p className="font-semibold text-gray-800 font-mono">
-                    {certificate.certificate_number}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <p className="text-xs text-gray-500">
-                  Verification Code: {certificate.verification_code}
+                <p className="small text-muted mb-0">
+                  Course Instructor: <strong>{certificate.instructor_name}</strong>
                 </p>
+              )}
+            </div>
+
+            {/* Footer Metadata */}
+            <div className="row g-3 pt-4 border-top text-start">
+              <div className="col-sm-6">
+                <small className="text-muted d-block text-uppercase" style={{ fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                  Issue Date
+                </small>
+                <strong className="text-dark">{formattedDate}</strong>
+              </div>
+              <div className="col-sm-6 text-sm-end">
+                <small className="text-muted d-block text-uppercase" style={{ fontSize: "0.7rem", letterSpacing: "0.05em" }}>
+                  Certificate Number
+                </small>
+                <code className="text-primary fw-bold" style={{ fontSize: "0.9rem" }}>
+                  {certificate.certificate_number}
+                </code>
               </div>
             </div>
+
+            {certificate.verification_code && (
+              <div className="mt-3 pt-2 text-center">
+                <span className="badge bg-light text-secondary border small">
+                  Verification Code: {certificate.verification_code}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="flex gap-3 mt-6 justify-center">
+          {/* Action Buttons */}
+          <div className="d-flex flex-wrap gap-2 justify-content-center mt-4">
             <button
+              type="button"
               onClick={() => onDownload(certificate)}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              className="btn btn-primary d-flex align-items-center gap-2 px-4 shadow-sm"
             >
-              <Download className="w-5 h-5" />
-              Download PDF
+              <Download size={18} />
+              <span>Download PDF</span>
             </button>
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/verify-certificate/${certificate.verification_code}`
-                );
-              }}
-              className="flex items-center gap-2 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+              type="button"
+              onClick={handleShare}
+              className="btn btn-outline-secondary d-flex align-items-center gap-2 px-4"
             >
-              <Share2 className="w-5 h-5" />
-              Share Link
+              {copied ? <Check size={18} className="text-success" /> : <Share2 size={18} />}
+              <span>{copied ? "Link Copied!" : "Share Link"}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn btn-light px-4"
+            >
+              Close
             </button>
           </div>
         </div>

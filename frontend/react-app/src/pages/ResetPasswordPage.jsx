@@ -46,15 +46,25 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-5">
       <div className="row justify-content-center">
-        <div className="col-lg-5 col-xl-4">
-          <div className="card shadow-lg border-0">
-            <div className="card-body p-4 p-md-5">
+        <div className="col-sm-10 col-md-8 col-lg-5 col-xl-4">
+          <div className="card shadow-sm border rounded-4 bg-white">
+            <div className="card-body p-4 p-md-4">
               <div className="text-center mb-4">
-                <Link to="/" className="text-decoration-none">
-                  <span className="fw-bold fs-4 text-primary">
-                    <i className="fas fa-graduation-cap me-2" />EduLearn
+                <Link to="/" className="text-decoration-none d-inline-flex align-items-center gap-2">
+                  <div
+                    className="d-flex align-items-center justify-content-center text-white rounded-3 shadow-sm"
+                    style={{
+                      width: "36px",
+                      height: "36px",
+                      background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    }}
+                  >
+                    <i className="fas fa-graduation-cap" style={{ fontSize: "1rem" }} />
+                  </div>
+                  <span className="fw-bold fs-4 text-dark tracking-tight">
+                    Edu<span className="text-primary">Learn</span>
                   </span>
                 </Link>
                 <h4 className="fw-bold mt-3 mb-1">Set New Password</h4>

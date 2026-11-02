@@ -131,7 +131,7 @@ export default function DashboardPage() {
   const displayName = user?.full_name || user?.name || "Learner";
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-4 py-lg-5">
       {/* Hero Welcome Banner */}
       <div className="dashboard-hero">
         <div className="row align-items-center">

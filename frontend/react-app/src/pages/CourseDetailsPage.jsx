@@ -158,29 +158,34 @@ export default function CourseDetailsPage() {
               </div>
             </div>
 
-            <div className="col-lg-4">
-              <div className="card enrollment-card shadow-sm">
+            <div className="col-lg-4 mt-4 mt-lg-0">
+              <div className="card enrollment-card shadow-sm border">
                 <div className="card-body p-4">
                   <div className="text-center mb-3">
+                    <span className="badge bg-light text-muted border px-2.5 py-1 mb-2 small">
+                      {course.category}
+                    </span>
                     <h3 className={`fw-bold mb-1 ${course.isFree ? "text-success" : "text-primary"}`}>
-                      {course.isFree ? "Free" : formatPrice(course.effectivePrice)}
+                      {course.isFree ? "Free Course" : formatPrice(course.effectivePrice)}
                     </h3>
-                    <small className="text-muted">{accessLabel}</small>
+                    <small className="text-muted d-block">{accessLabel}</small>
                   </div>
 
                   <div className="d-grid gap-2">
-                    <button className="btn btn-primary btn-lg" type="button" onClick={handleEnroll}>
+                    <button className="btn btn-primary btn-lg shadow-sm" type="button" onClick={handleEnroll}>
+                      <i className={`fas ${access?.hasAccess ? "fa-play-circle" : "fa-bolt"} me-2`} />
                       {access?.hasAccess ? "Go to Course Dashboard" : "Enroll Now"}
                     </button>
-                    <Link to="/courses" className="btn btn-outline-primary btn-lg">
-                      Browse More Courses
+                    <Link to="/courses" className="btn btn-outline-secondary btn-sm">
+                      <i className="fas fa-arrow-left me-1" /> Browse More Courses
                     </Link>
                   </div>
 
-                  <div className="alert alert-light border mt-3 mb-0">
+                  <div className="alert alert-light border mt-3 mb-0 small text-muted">
+                    <i className="fas fa-shield-halved text-success me-1" />
                     {course.isFree
                       ? "Free courses enroll instantly once you sign in."
-                      : "Paid courses require login and a simulated payment to unlock content."}
+                      : "Paid courses include full lifetime access and 30-day money-back guarantee."}
                   </div>
                 </div>
               </div>
@@ -253,8 +258,8 @@ export default function CourseDetailsPage() {
             </div>
           </div>
 
-          <div className="col-lg-4">
-            <div className="card border-0 shadow-sm mb-4">
+          <div className="col-lg-4 sticky-sidebar">
+            <div className="card border rounded-4 shadow-sm mb-4">
               <div className="card-body">
                 <h5 className="fw-bold mb-3">What You'll Get</h5>
                 <ul className="list-unstyled mb-0">

@@ -271,21 +271,33 @@ export default function LearningPage() {
 
   return (
     <>
-      {/* Top Navbar */}
-      <nav className="navbar navbar-light bg-white shadow-sm fixed-top">
+      {/* Top Learning Navbar */}
+      <nav className="navbar navbar-light bg-white shadow-sm fixed-top py-2">
         <div className="container">
-          <Link className="navbar-brand fw-bold text-primary fs-3" to="/">
-            <i className="fas fa-graduation-cap me-2" />
-            EduLearn
+          <Link className="navbar-brand d-flex align-items-center gap-2" to="/">
+            <div
+              className="d-flex align-items-center justify-content-center text-white rounded-3 shadow-sm"
+              style={{
+                width: "34px",
+                height: "34px",
+                background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+              }}
+            >
+              <i className="fas fa-graduation-cap" style={{ fontSize: "1rem" }} />
+            </div>
+            <span className="fw-bold tracking-tight text-dark fs-5">
+              Edu<span className="text-primary">Learn</span>
+            </span>
           </Link>
           <div className="d-flex align-items-center gap-2">
-            <span className={`badge ${course.isFree ? "bg-success" : "bg-dark"}`}>
-              {course.isFree ? "FREE" : "PAID"}
+            <span className={`badge ${course.isFree ? "badge-soft-success" : "badge-soft-primary"} d-none d-sm-inline-block`}>
+              {course.isFree ? "Free Course" : "Full Access"}
             </span>
-            <Link to={dashboardPath} className="btn btn-outline-primary btn-sm rounded-pill">
-              <i className="fas fa-gauge-high me-1" /> My Dashboard
+            <Link to={dashboardPath} className="btn btn-outline-primary btn-sm rounded-pill d-flex align-items-center gap-1">
+              <i className="fas fa-gauge-high" />
+              <span className="d-none d-sm-inline">Dashboard</span>
             </Link>
-            <Link to={`/courses/${course.id}`} className="btn btn-light btn-sm rounded-pill">
+            <Link to={`/courses/${course.id}`} className="btn btn-light btn-sm rounded-pill border">
               Course Details
             </Link>
           </div>

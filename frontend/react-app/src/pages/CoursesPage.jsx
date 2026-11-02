@@ -20,6 +20,7 @@ export default function CoursesPage() {
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Sync state whenever URL searchParams change (e.g. user clicked category in navbar)
   useEffect(() => {
@@ -118,6 +119,15 @@ export default function CoursesPage() {
 
   const totalPages = pagination.totalPages;
 
+  const activeFiltersCount = useMemo(() => {
+    return [
+      Boolean(resolvedCategory),
+      Boolean(searchTerm),
+      selectedLevel !== "all",
+      freeOnly,
+    ].filter(Boolean).length;
+  }, [resolvedCategory, searchTerm, selectedLevel, freeOnly]);
+
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedCategory("");
@@ -141,7 +151,7 @@ export default function CoursesPage() {
   };
 
   return (
-    <div className="container py-5 mt-5">
+    <div className="container py-4 py-lg-5">
       <div className="row mb-4">
         <div className="col-12">
           <h1 className="fw-bold mb-2">Explore Courses</h1>
@@ -151,9 +161,32 @@ export default function CoursesPage() {
         </div>
       </div>
 
+      {/* Mobile Filter Toggle Button */}
+      <div className="d-lg-none mb-3">
+        <button
+          type="button"
+          className="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-between p-2.5 rounded-3 bg-white shadow-sm"
+          onClick={() => setMobileFilterOpen((prev) => !prev)}
+        >
+          <span className="d-flex align-items-center gap-2">
+            <i className="fas fa-sliders text-primary" />
+            <span className="fw-semibold text-dark">Filters & Search</span>
+            {activeFiltersCount > 0 && (
+              <span className="badge bg-primary rounded-pill small px-2">
+                {activeFiltersCount}
+              </span>
+            )}
+          </span>
+          <span className="small text-muted d-flex align-items-center gap-1">
+            <span>{mobileFilterOpen ? "Hide" : "Show"}</span>
+            <i className={`fas fa-chevron-${mobileFilterOpen ? "up" : "down"}`} />
+          </span>
+        </button>
+      </div>
+
       <div className="row">
-        {/* Left Filter Sidebar */}
-        <div className="col-lg-3 mb-4">
+        {/* Filter Sidebar (Always visible on lg+, collapsible on mobile) */}
+        <div className={`col-lg-3 ${mobileFilterOpen ? "d-block" : "d-none"} d-lg-block mb-4`}>
           <div className="card shadow-sm border-0 rounded-4">
             <div className="card-body p-4">
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -326,9 +359,11 @@ export default function CoursesPage() {
             </div>
           ) : (
             <>
-              <div className="row g-4">
+              <div className="row">
                 {courses.length > 0 ? (
-                  courses.map((course) => <CourseCard key={course.id} course={course} />)
+                  courses.map((course) => (
+                    <CourseCard key={course.id} course={course} columnClass="col-md-6 col-xl-4 mb-4" />
+                  ))
                 ) : (
                   <div className="col-12">
                     <div className="card border-0 shadow-sm rounded-4 p-5 text-center text-muted">
