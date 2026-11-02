@@ -6,16 +6,36 @@ import { normalizeCourse } from "../utils/courseAdapter";
 import { formatPrice } from "../utils/format";
 
 const GATEWAYS = [
-  { value: "credit_card", label: "Credit Card", icon: "fa-credit-card" },
-  { value: "debit_card", label: "Debit Card", icon: "fa-credit-card" },
-  { value: "telebirr", label: "Telebirr", icon: "fa-mobile-alt" },
-  { value: "bank_transfer", label: "Bank Transfer", icon: "fa-university" },
+  {
+    value: "chapa",
+    label: "Chapa (Telebirr / CBE / Awash / Cards)",
+    badge: "Recommended",
+    badgeColor: "success",
+    icon: "fa-bolt",
+    subtext: "Instant activation via Telebirr, CBE Birr, Awash, or Debit Card in Ethiopian Birr (ETB).",
+  },
+  {
+    value: "telebirr",
+    label: "Telebirr Direct (Simulation)",
+    badge: "Instant",
+    badgeColor: "primary",
+    icon: "fa-mobile-screen-button",
+    subtext: "Simulate an instant Telebirr wallet payment.",
+  },
+  {
+    value: "bank_transfer",
+    label: "Bank Transfer (Manual)",
+    badge: "Manual Verification",
+    badgeColor: "secondary",
+    icon: "fa-building-columns",
+    subtext: "Deposit into CBE, Awash, or BOA account and upload receipt.",
+  },
 ];
 
 export default function PaymentPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
-  const { isLoggedIn, role, notify, refreshStudentState } = useAuth();
+  const { isLoggedIn, role, user, notify, refreshStudentState } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
@@ -23,8 +43,8 @@ export default function PaymentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [paymentResult, setPaymentResult] = useState(null);
   const [form, setForm] = useState({
-    gateway: "credit_card",
-    payerName: "",
+    gateway: "chapa",
+    payerName: user?.name || "",
     payerPhone: "",
     payerReference: "",
     cardNumber: "",
@@ -74,14 +94,24 @@ export default function PaymentPage() {
     loadCourse();
   }, [courseId, isLoggedIn, role, navigate, notify]);
 
+  // Sync user name into form if not set
+  useEffect(() => {
+    if (user?.name && !form.payerName) {
+      setForm((p) => ({ ...p, payerName: user.name }));
+    }
+  }, [user?.name]);
+
   const isCardGateway = form.gateway === "credit_card" || form.gateway === "debit_card";
 
   const canProceedStep2 = useMemo(() => {
     if (!form.payerName.trim()) return false;
+    if (form.gateway === "chapa") {
+      return Boolean(form.payerName.trim());
+    }
     if (isCardGateway) {
       return form.cardNumber.length >= 12 && form.cardExpiry && form.cardCvc.length >= 3;
     }
-    return form.payerPhone.trim().length >= 6;
+    return true;
   }, [form, isCardGateway]);
 
   const handleConfirmPayment = async () => {
@@ -91,14 +121,24 @@ export default function PaymentPage() {
         gateway: form.gateway,
         payerName: form.payerName,
         payerPhone: form.payerPhone || form.cardNumber.slice(-4),
-        payerReference: form.payerReference || `Simulated ${form.gateway} payment`,
+        payerReference: form.payerReference || `EduLearn course purchase`,
       });
+
+      const payload = data?.data || data;
+
+      // If Chapa provided a hosted checkout link, redirect student immediately
+      if (payload?.checkoutUrl) {
+        notify("Redirecting to Chapa secure payment portal...", "info");
+        window.location.href = payload.checkoutUrl;
+        return;
+      }
+
       await refreshStudentState();
-      setPaymentResult(data);
+      setPaymentResult(payload);
       setStep(3);
       notify("Payment completed successfully!", "success");
     } catch (error) {
-      notify(error.message || "Payment failed", "danger");
+      notify(error.message || "Payment initialization failed", "danger");
     } finally {
       setSubmitting(false);
     }
@@ -129,21 +169,30 @@ export default function PaymentPage() {
           <li className="breadcrumb-item">
             <Link to={`/courses/${courseId}`}>{course.title}</Link>
           </li>
-          <li className="breadcrumb-item active">Payment</li>
+          <li className="breadcrumb-item active">Checkout</li>
         </ol>
       </nav>
 
       <div className="row justify-content-center">
         <div className="col-lg-8">
-          <div className="card border-0 shadow-sm">
-            <div className="card-body p-4">
+          <div className="card border-0 rounded-4 shadow-sm bg-white overflow-hidden">
+            <div className="card-body p-4 p-md-5">
               <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-                <h2 className="fw-bold mb-0">Course Payment</h2>
+                <div>
+                  <h2 className="fw-bold mb-1">Course Checkout</h2>
+                  <p className="text-muted small mb-0">Secure course enrollment in Ethiopian Birr (ETB)</p>
+                </div>
                 <div className="d-flex gap-2">
                   {[1, 2, 3].map((s) => (
                     <span
                       key={s}
-                      className={`badge rounded-pill ${step >= s ? "bg-primary" : "bg-secondary"}`}
+                      className={`badge rounded-pill px-3 py-1.5 ${
+                        step === s
+                          ? "bg-primary text-white"
+                          : step > s
+                          ? "bg-success text-white"
+                          : "bg-light text-muted border"
+                      }`}
                     >
                       Step {s}
                     </span>
@@ -154,160 +203,164 @@ export default function PaymentPage() {
               {step === 1 && (
                 <div>
                   <h5 className="fw-bold mb-3">Order Summary</h5>
-                  <div className="border rounded p-3 mb-4">
-                    <div className="d-flex gap-3 align-items-center">
+                  <div className="border rounded-4 p-3.5 mb-4 bg-light">
+                    <div className="d-flex gap-3 align-items-center flex-wrap flex-sm-nowrap">
                       <img
                         src={course.image}
                         alt={course.title}
-                        className="rounded"
-                        style={{ width: 80, height: 60, objectFit: "cover" }}
+                        className="rounded-3 shadow-sm"
+                        style={{ width: 100, height: 75, objectFit: "cover" }}
                       />
-                      <div>
-                        <h6 className="fw-bold mb-1">{course.title}</h6>
-                        <small className="text-muted">{course.instructor} · {course.level}</small>
+                      <div className="flex-grow-1">
+                        <span className="badge bg-primary bg-opacity-10 text-primary mb-1">
+                          {course.category}
+                        </span>
+                        <h6 className="fw-bold mb-1 text-dark">{course.title}</h6>
+                        <small className="text-muted d-block">
+                          Instructor: {course.instructor} · {course.level}
+                        </small>
                       </div>
-                      <div className="ms-auto text-end">
-                        <span className="badge bg-dark mb-1">PAID</span>
-                        <div className="fw-bold text-primary fs-5">
+                      <div className="ms-sm-auto text-sm-end w-100 w-sm-auto pt-2 pt-sm-0 border-top border-sm-top-0">
+                        <span className="badge bg-dark mb-1">PREMIUM</span>
+                        <div className="fw-bold text-primary fs-4">
                           {formatPrice(course.effectivePrice)}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="alert alert-info mb-4">
-                    <i className="fas fa-info-circle me-2" />
-                    This is a simulated payment — no real charges will be made.
+                  <div className="d-flex align-items-center gap-2 p-3 rounded-3 bg-light border mb-4 text-muted small">
+                    <i className="fas fa-lock text-success" />
+                    <span>
+                      256-bit encrypted checkout. All course materials, certificates, and future updates are included.
+                    </span>
                   </div>
 
                   <button
                     type="button"
-                    className="btn btn-primary w-100"
+                    className="btn btn-primary btn-lg w-100 rounded-pill shadow-sm"
                     onClick={() => setStep(2)}
                   >
-                    Continue to Payment
+                    Continue to Payment Options <i className="fas fa-arrow-right ms-2" />
                   </button>
                 </div>
               )}
 
               {step === 2 && (
                 <div>
-                  <h5 className="fw-bold mb-3">Payment Method & Details</h5>
+                  <h5 className="fw-bold mb-3">Select Payment Method</h5>
 
-                  <div className="mb-4">
-                    <label className="form-label fw-semibold">Select Payment Method</label>
-                    <div className="row g-2">
-                      {GATEWAYS.map((gw) => (
-                        <div className="col-6 col-md-3" key={gw.value}>
-                          <button
-                            type="button"
-                            className={`btn w-100 ${form.gateway === gw.value ? "btn-primary" : "btn-outline-secondary"}`}
-                            onClick={() => setForm((prev) => ({ ...prev, gateway: gw.value }))}
-                          >
-                            <i className={`fas ${gw.icon} me-1`} />
-                            {gw.label}
-                          </button>
+                  <div className="d-flex flex-column gap-3 mb-4">
+                    {GATEWAYS.map((gw) => (
+                      <div
+                        key={gw.value}
+                        className={`p-3.5 rounded-4 border cursor-pointer transition-all ${
+                          form.gateway === gw.value
+                            ? "border-primary bg-primary bg-opacity-10 shadow-sm"
+                            : "border-light-subtle bg-white hover-light"
+                        }`}
+                        onClick={() => setForm((p) => ({ ...p, gateway: gw.value }))}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div className="d-flex align-items-center justify-content-between mb-1">
+                          <div className="d-flex align-items-center gap-2.5">
+                            <input
+                              type="radio"
+                              name="gatewaySelect"
+                              checked={form.gateway === gw.value}
+                              onChange={() => setForm((p) => ({ ...p, gateway: gw.value }))}
+                              className="form-check-input mt-0"
+                            />
+                            <span className="fw-bold text-dark">{gw.label}</span>
+                          </div>
+                          <span className={`badge bg-${gw.badgeColor} rounded-pill px-2.5 py-1 small`}>
+                            {gw.badge}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="row g-3 mb-3">
-                    <div className="col-md-6">
-                      <label className="form-label">Full Name</label>
-                      <input
-                        className="form-control"
-                        value={form.payerName}
-                        onChange={(e) => setForm((p) => ({ ...p, payerName: e.target.value }))}
-                        placeholder="Cardholder or payer name"
-                        required
-                      />
-                    </div>
-                    {!isCardGateway && (
-                      <div className="col-md-6">
-                        <label className="form-label">Phone / Account</label>
-                        <input
-                          className="form-control"
-                          value={form.payerPhone}
-                          onChange={(e) => setForm((p) => ({ ...p, payerPhone: e.target.value }))}
-                          placeholder="09xxxxxxxx or account number"
-                        />
+                        <p className="text-muted small mb-0 ps-4">
+                          {gw.subtext}
+                        </p>
                       </div>
-                    )}
+                    ))}
                   </div>
 
-                  {isCardGateway && (
-                    <div className="border rounded p-3 mb-3 bg-light">
-                      <h6 className="fw-bold mb-3">
-                        <i className="fas fa-credit-card me-2" />
-                        Mock Card Details
-                      </h6>
-                      <div className="row g-3">
-                        <div className="col-12">
-                          <label className="form-label">Card Number</label>
-                          <input
-                            className="form-control"
-                            value={form.cardNumber}
-                            onChange={(e) =>
-                              setForm((p) => ({
-                                ...p,
-                                cardNumber: e.target.value.replace(/\D/g, "").slice(0, 16),
-                              }))
-                            }
-                            placeholder="4242 4242 4242 4242"
-                            maxLength={16}
-                          />
-                        </div>
-                        <div className="col-md-6">
-                          <label className="form-label">Expiry (MM/YY)</label>
-                          <input
-                            className="form-control"
-                            value={form.cardExpiry}
-                            onChange={(e) => setForm((p) => ({ ...p, cardExpiry: e.target.value }))}
-                            placeholder="12/28"
-                            maxLength={5}
-                          />
-                        </div>
-                        <div className="col-md-6">
-                          <label className="form-label">CVC</label>
-                          <input
-                            className="form-control"
-                            value={form.cardCvc}
-                            onChange={(e) =>
-                              setForm((p) => ({
-                                ...p,
-                                cardCvc: e.target.value.replace(/\D/g, "").slice(0, 4),
-                              }))
-                            }
-                            placeholder="123"
-                            maxLength={4}
-                          />
-                        </div>
+                  {/* Chapa Information Callout */}
+                  {form.gateway === "chapa" && (
+                    <div className="p-3.5 rounded-4 border bg-light mb-4">
+                      <div className="d-flex align-items-center gap-2 mb-2">
+                        <i className="fas fa-shield-halved text-success fa-lg" />
+                        <h6 className="fw-bold text-dark mb-0">Chapa Multi-Payment Gateway</h6>
+                      </div>
+                      <p className="small text-muted mb-2">
+                        You will be redirected to Chapa's official payment page to pay in Ethiopian Birr (ETB) using:
+                      </p>
+                      <div className="d-flex flex-wrap gap-2 mb-2">
+                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
+                          <i className="fas fa-mobile-screen text-success me-1" /> Telebirr
+                        </span>
+                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
+                          <i className="fas fa-building-columns text-primary me-1" /> CBE Birr
+                        </span>
+                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
+                          <i className="fas fa-university text-warning me-1" /> Awash / BOA / Dashen
+                        </span>
+                        <span className="badge bg-white text-dark border px-2.5 py-1.5">
+                          <i className="fas fa-credit-card text-info me-1" /> Local Debit Cards
+                        </span>
                       </div>
                     </div>
                   )}
 
-                  <div className="mb-4">
-                    <label className="form-label">Reference Note (optional)</label>
-                    <input
-                      className="form-control"
-                      value={form.payerReference}
-                      onChange={(e) => setForm((p) => ({ ...p, payerReference: e.target.value }))}
-                      placeholder="Optional payment note"
-                    />
+                  <div className="row g-3 mb-4">
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">Payer Full Name <span className="text-danger">*</span></label>
+                      <input
+                        className="form-control rounded-3"
+                        value={form.payerName}
+                        onChange={(e) => setForm((p) => ({ ...p, payerName: e.target.value }))}
+                        placeholder="e.g. Yerosan Girma"
+                        required
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label small fw-semibold">
+                        Phone Number (Telebirr / Mobile)
+                      </label>
+                      <input
+                        className="form-control rounded-3"
+                        value={form.payerPhone}
+                        onChange={(e) => setForm((p) => ({ ...p, payerPhone: e.target.value }))}
+                        placeholder="09xxxxxxxx"
+                      />
+                    </div>
                   </div>
 
                   <div className="d-flex gap-2">
-                    <button type="button" className="btn btn-outline-secondary" onClick={() => setStep(1)}>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary rounded-pill px-4"
+                      onClick={() => setStep(1)}
+                    >
                       Back
                     </button>
                     <button
                       type="button"
-                      className="btn btn-primary flex-grow-1"
+                      className="btn btn-primary btn-lg flex-grow-1 rounded-pill shadow-sm"
                       disabled={!canProceedStep2 || submitting}
                       onClick={handleConfirmPayment}
                     >
-                      {submitting ? "Processing..." : `Pay ${formatPrice(course.effectivePrice)}`}
+                      {submitting ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                          <span>Connecting to Payment Gateway...</span>
+                        </>
+                      ) : form.gateway === "chapa" ? (
+                        <>
+                          <i className="fas fa-bolt me-2" /> Pay {formatPrice(course.effectivePrice)} via Chapa
+                        </>
+                      ) : (
+                        `Pay ${formatPrice(course.effectivePrice)}`
+                      )}
                     </button>
                   </div>
                 </div>
@@ -323,7 +376,7 @@ export default function PaymentPage() {
                     You have been automatically enrolled in <strong>{course.title}</strong>.
                   </p>
 
-                  <div className="border rounded p-3 mb-4 text-start">
+                  <div className="border rounded-4 p-3.5 mb-4 text-start bg-light">
                     <div className="row g-2 small">
                       <div className="col-6"><strong>Amount:</strong></div>
                       <div className="col-6">{formatPrice(course.effectivePrice)}</div>
@@ -332,7 +385,7 @@ export default function PaymentPage() {
                         {paymentResult.gateway?.replace("_", " ")}
                       </div>
                       <div className="col-6"><strong>Transaction ID:</strong></div>
-                      <div className="col-6">{paymentResult.transactionId}</div>
+                      <div className="col-6 font-monospace">{paymentResult.transactionId}</div>
                       <div className="col-6"><strong>Status:</strong></div>
                       <div className="col-6">
                         <span className="badge bg-success">{paymentResult.status}</span>
@@ -340,8 +393,8 @@ export default function PaymentPage() {
                     </div>
                   </div>
 
-                  <button type="button" className="btn btn-primary btn-lg w-100" onClick={goToDashboard}>
-                    Go to Course Dashboard
+                  <button type="button" className="btn btn-primary btn-lg w-100 rounded-pill shadow-sm" onClick={goToDashboard}>
+                    <i className="fas fa-play me-2" /> Go to Course Dashboard
                   </button>
                 </div>
               )}

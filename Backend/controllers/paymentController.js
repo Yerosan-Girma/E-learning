@@ -9,6 +9,7 @@ const userModel = require("../models/userModel");
 const { initializePayment } = require("../services/paymentGatewayService");
 const { getEffectiveCoursePrice, isCourseFree } = require("../services/courseAccessService");
 const emailService = require("../services/emailService");
+const chapaService = require("../services/chapaService");
 
 async function ensureEnrollmentStatus({ userId, courseId, status }) {
   const existingEnrollment = await enrollmentModel.findEnrollment({
@@ -66,6 +67,65 @@ const initializeCoursePayment = asyncHandler(async (req, res) => {
   }
 
   const amount = getEffectiveCoursePrice(course);
+  const requestedGateway = (req.body.gateway || "chapa").toLowerCase().trim();
+
+  // If Chapa is requested (or default) and configured, initialize hosted transaction
+  if (requestedGateway === "chapa" && chapaService.isChapaConfigured()) {
+    const txRef = chapaService.generateTxRef("edl");
+    const frontendOrigin = (process.env.CORS_ORIGIN || "https://e-learning-three-phi.vercel.app").split(",")[0].trim();
+    const returnUrl = `${frontendOrigin}/payment/verify?tx_ref=${txRef}&course_id=${courseId}`;
+    const backendOrigin = (process.env.BACKEND_URL || "https://e-leraning.onrender.com").trim();
+    const callbackUrl = `${backendOrigin}/api/payments/chapa/webhook`;
+
+    const studentName = req.body.payerName || req.user.full_name || "Student User";
+    const nameParts = studentName.trim().split(" ");
+    const firstName = nameParts[0] || "Student";
+    const lastName = nameParts.slice(1).join(" ") || "User";
+
+    const chapaRes = await chapaService.initializeTransaction({
+      amount,
+      currency: "ETB",
+      email: req.user.email,
+      firstName,
+      lastName,
+      phoneNumber: req.body.payerPhone,
+      txRef,
+      returnUrl,
+      callbackUrl,
+      title: `EduLearn: ${course.title.slice(0, 30)}`,
+      description: `Course enrollment payment for ID ${courseId}`,
+    });
+
+    const paymentId = await paymentModel.createPayment({
+      userId: req.user.id,
+      courseId,
+      amount,
+      gateway: "chapa",
+      transactionId: txRef,
+      status: "pending",
+      screenshotPath: null,
+      metaJson: {
+        checkoutUrl: chapaRes.checkoutUrl,
+        txRef,
+        payerPhone: req.body.payerPhone || null,
+        payerName: studentName,
+      },
+    });
+
+    return sendSuccess(
+      res,
+      {
+        paymentId,
+        gateway: "chapa",
+        transactionId: txRef,
+        status: "pending",
+        checkoutUrl: chapaRes.checkoutUrl,
+        instructions: "Redirecting to Chapa secure checkout for Telebirr / CBE / Card payment...",
+      },
+      "Chapa payment initialized"
+    );
+  }
+
   const gatewayPayload = await initializePayment({
     gateway: req.body.gateway,
     amount,
@@ -303,6 +363,150 @@ const handlePaymentWebhook = asyncHandler(async (req, res) => {
   return sendSuccess(res, {}, "Webhook processed");
 });
 
+const verifyChapaPayment = asyncHandler(async (req, res) => {
+  const { txRef } = req.body;
+  if (!txRef) {
+    throw new ApiError(400, "Transaction reference (txRef) is required");
+  }
+
+  const payment = await paymentModel.findPaymentByTransaction(txRef);
+  if (!payment) {
+    throw new ApiError(404, "Payment record not found for transaction reference");
+  }
+
+  // Already completed
+  if (payment.status === "completed") {
+    return sendSuccess(
+      res,
+      {
+        courseId: payment.course_id,
+        status: "completed",
+        transactionId: txRef,
+      },
+      "Payment already verified and course access is active."
+    );
+  }
+
+  // Verify status directly with Chapa
+  const chapaVerify = await chapaService.verifyTransaction(txRef);
+
+  if (!chapaVerify.success || (chapaVerify.status !== "success" && chapaVerify.raw?.status !== "success")) {
+    throw new ApiError(400, chapaVerify.message || "Payment has not been completed on Chapa yet");
+  }
+
+  // Mark payment completed
+  await paymentModel.updatePaymentStatus({
+    paymentId: payment.id,
+    status: "completed",
+    transactionId: txRef,
+  });
+
+  // Approve course enrollment
+  await ensureEnrollmentStatus({
+    userId: payment.user_id,
+    courseId: payment.course_id,
+    status: "approved",
+  });
+
+  const course = await courseModel.getCourseById(payment.course_id);
+  const student = await userModel.findUserById(payment.user_id);
+
+  if (student && course) {
+    emailService
+      .sendEnrollmentEmail({
+        studentEmail: student.email,
+        studentName: student.full_name,
+        courseTitle: course.title,
+        courseId: course.id,
+        amount: payment.amount,
+        isFree: false,
+      })
+      .catch((err) => console.error("[ChapaVerify] Student email error:", err.message));
+
+    emailService
+      .sendAdminEnrollmentAlert({
+        studentEmail: student.email,
+        studentName: student.full_name,
+        courseTitle: course.title,
+        courseId: course.id,
+        amount: payment.amount,
+        isFree: false,
+        enrollmentType: "purchase",
+      })
+      .catch((err) => console.error("[ChapaVerify] Admin alert error:", err.message));
+  }
+
+  return sendSuccess(
+    res,
+    {
+      courseId: payment.course_id,
+      status: "completed",
+      transactionId: txRef,
+    },
+    "Payment verified successfully! Course enrollment activated."
+  );
+});
+
+const handleChapaWebhook = asyncHandler(async (req, res) => {
+  const txRef = req.body?.tx_ref || req.query?.tx_ref;
+  if (!txRef) {
+    return res.status(200).json({ received: true });
+  }
+
+  const payment = await paymentModel.findPaymentByTransaction(txRef);
+  if (!payment || payment.status === "completed") {
+    return res.status(200).json({ received: true });
+  }
+
+  try {
+    const chapaVerify = await chapaService.verifyTransaction(txRef);
+    if (chapaVerify.success && (chapaVerify.status === "success" || chapaVerify.raw?.status === "success")) {
+      await paymentModel.updatePaymentStatus({
+        paymentId: payment.id,
+        status: "completed",
+        transactionId: txRef,
+      });
+
+      await ensureEnrollmentStatus({
+        userId: payment.user_id,
+        courseId: payment.course_id,
+        status: "approved",
+      });
+
+      const course = await courseModel.getCourseById(payment.course_id);
+      const student = await userModel.findUserById(payment.user_id);
+      if (student && course) {
+        emailService
+          .sendEnrollmentEmail({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+          })
+          .catch((err) => console.error("[ChapaWebhook] Email error:", err.message));
+
+        emailService
+          .sendAdminEnrollmentAlert({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+            enrollmentType: "purchase",
+          })
+          .catch((err) => console.error("[ChapaWebhook] Admin alert error:", err.message));
+      }
+    }
+  } catch (err) {
+    console.error("[ChapaWebhook] Error processing webhook:", err.message);
+  }
+
+  return res.status(200).json({ received: true });
+});
+
 const getMyPayments = asyncHandler(async (req, res) => {
   const payments = await paymentModel.listPayments({ userId: req.user.id });
   return sendSuccess(res, { payments }, "Payments fetched");
@@ -321,6 +525,8 @@ module.exports = {
   submitManualPaymentProof,
   updatePaymentStatus,
   handlePaymentWebhook,
+  verifyChapaPayment,
+  handleChapaWebhook,
   getMyPayments,
   listAllPayments,
 };

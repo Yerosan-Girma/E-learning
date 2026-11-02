@@ -104,6 +104,11 @@ export const api = {
       method: "POST",
       body: payload,
     }),
+  verifyChapaPayment: (txRef) =>
+    request("/payments/chapa/verify", {
+      method: "POST",
+      body: { txRef },
+    }),
   submitManualProof: (courseId, { screenshot, transactionId, notes }) => {
     const form = new FormData();
     if (screenshot) form.append("screenshot", screenshot);

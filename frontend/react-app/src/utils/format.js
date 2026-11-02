@@ -3,11 +3,11 @@ export function formatPrice(value) {
     return "Free";
   }
 
-  return `$${Number(value).toFixed(2)}`;
+  return `${Number(value).toLocaleString("en-US")} ETB`;
 }
 
 export function formatCurrency(value) {
-  return `$${Number(value || 0).toFixed(2)}`;
+  return `${Number(value || 0).toLocaleString("en-US")} ETB`;
 }
 
 export function formatNumber(value) {

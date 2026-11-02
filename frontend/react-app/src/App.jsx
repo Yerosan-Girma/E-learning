@@ -23,6 +23,7 @@ const ContactPage = lazy(() => import("./pages/ContactPage"));
 const FAQPage = lazy(() => import("./pages/FAQPage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const PaymentPage = lazy(() => import("./pages/PaymentPage"));
+const PaymentVerifyPage = lazy(() => import("./pages/PaymentVerifyPage"));
 const LearningPage = lazy(() => import("./pages/LearningPage"));
 const StudentDashboardPage = lazy(() => import("./pages/StudentDashboardPage"));
 const TeacherDashboardPage = lazy(() => import("./pages/TeacherDashboardPage"));
@@ -236,12 +237,20 @@ function AppShell() {
             <Route path="/verify-email" element={<VerifyEmailPage />} />
             <Route path="/auth/callback" element={<GoogleCallback />} />
 
-            {/* Payment Verification */}
+            {/* Payment & Verification */}
             <Route
               path="/payment/:courseId"
               element={
                 <ProtectedRoute allowedRoles={["student"]}>
                   <PaymentPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/payment/verify"
+              element={
+                <ProtectedRoute allowedRoles={["student"]}>
+                  <PaymentVerifyPage />
                 </ProtectedRoute>
               }
             />

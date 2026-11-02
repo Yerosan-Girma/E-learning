@@ -21,6 +21,8 @@ router.post(
   paymentController.submitManualPaymentProof
 );
 
+router.post("/chapa/verify", protect, paymentController.verifyChapaPayment);
+router.post("/chapa/webhook", paymentController.handleChapaWebhook);
 router.post("/webhook", paymentController.handlePaymentWebhook);
 router.get("/me", protect, paymentController.getMyPayments);
 router.get("/", protect, requireRole("admin"), paymentController.listAllPayments);

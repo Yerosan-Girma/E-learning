@@ -28,7 +28,15 @@ services:
       - key: GOOGLE_CALLBACK_URL
         value: https://e-leraning.onrender.com/api/auth/google/callback
       - key: PAYMENT_GATEWAY_MODE
-        value: mock
+        value: chapa
+      - key: CHAPA_BASE_URL
+        value: https://api.chapa.global
+      - key: CHAPA_PUBLIC_KEY
+        sync: false
+      - key: CHAPA_SECRET_KEY
+        sync: false
+      - key: CHAPA_WEBHOOK_SECRET
+        sync: false
       - key: SMTP_HOST
         value: smtp.gmail.com
       - key: SMTP_PORT

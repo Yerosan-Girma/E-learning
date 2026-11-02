@@ -198,11 +198,11 @@ async function ensureSchema() {
         -- First, update any 'manual' values to 'bank_transfer'
         UPDATE payments SET gateway = 'bank_transfer' WHERE gateway = 'manual';
         
-        -- Drop and recreate gateway constraint to include card payment methods
+        -- Drop and recreate gateway constraint to include card and chapa payment methods
         ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_gateway_check;
         ALTER TABLE payments
         ADD CONSTRAINT payments_gateway_check
-        CHECK (gateway IN ('telebirr', 'bank_transfer', 'cash', 'credit_card', 'debit_card'));
+        CHECK (gateway IN ('telebirr', 'bank_transfer', 'cash', 'credit_card', 'debit_card', 'chapa', 'cbe_birr'));
         
         -- Set default if column exists
         ALTER TABLE payments 
