@@ -6,6 +6,7 @@ const enrollmentModel = require("../models/enrollmentModel");
 const paymentModel = require("../models/paymentModel");
 const subscriptionModel = require("../models/subscriptionModel");
 const { isCourseFree, getEffectiveCoursePrice } = require("../services/courseAccessService");
+const emailService = require("../services/emailService");
 
 const enrollInCourse = asyncHandler(async (req, res) => {
   const courseId = Number(req.params.courseId);
@@ -91,6 +92,18 @@ const enrollInCourse = asyncHandler(async (req, res) => {
         userId: req.user.id,
         courseId,
       });
+
+      // Send enrollment confirmation email asynchronously
+      emailService
+        .sendEnrollmentEmail({
+          studentEmail: req.user.email,
+          studentName: req.user.full_name,
+          courseTitle: course.title,
+          courseId: course.id,
+          amount: 0,
+          isFree: true,
+        })
+        .catch((err) => console.error("[Enrollment] Email confirmation error:", err.message));
 
       return sendSuccess(
         res,

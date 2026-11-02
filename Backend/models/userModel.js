@@ -1,13 +1,13 @@
 const { pool } = require("../config/db");
 
-async function createUser({ fullName, email, passwordHash, role, status = "active", specialization = null, bio = null, proposedCourse = null }) {
+async function createUser({ fullName, email, passwordHash, role, status = "active", specialization = null, bio = null, proposedCourse = null, verificationToken = null }) {
   const query = `
-    INSERT INTO users (full_name, email, password_hash, role, status, specialization, bio, proposed_course)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    INSERT INTO users (full_name, email, password_hash, role, status, specialization, bio, proposed_course, verification_token)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING id
   `;
 
-  const result = await pool.query(query, [fullName, email, passwordHash, role, status, specialization, bio, proposedCourse]);
+  const result = await pool.query(query, [fullName, email, passwordHash, role, status, specialization, bio, proposedCourse, verificationToken]);
   return result.rows[0].id;
 }
 
@@ -95,6 +95,54 @@ async function listPendingTeachers() {
   return result.rows;
 }
 
+async function setVerificationToken(userId, token) {
+  const result = await pool.query(
+    "UPDATE users SET verification_token = $1 WHERE id = $2 RETURNING id",
+    [token, userId]
+  );
+  return result.rowCount > 0;
+}
+
+async function findByVerificationToken(token) {
+  const result = await pool.query(
+    "SELECT id, full_name, email, role, status, email_verified FROM users WHERE verification_token = $1 LIMIT 1",
+    [token]
+  );
+  return result.rows[0] || null;
+}
+
+async function markEmailVerified(userId) {
+  const result = await pool.query(
+    "UPDATE users SET email_verified = true, verification_token = NULL WHERE id = $1 RETURNING id",
+    [userId]
+  );
+  return result.rowCount > 0;
+}
+
+async function setResetToken(userId, token, expiresAt) {
+  const result = await pool.query(
+    "UPDATE users SET reset_token = $1, reset_token_expires = $2 WHERE id = $3 RETURNING id",
+    [token, expiresAt, userId]
+  );
+  return result.rowCount > 0;
+}
+
+async function findByResetToken(token) {
+  const result = await pool.query(
+    "SELECT id, full_name, email, role, status, reset_token_expires FROM users WHERE reset_token = $1 AND reset_token_expires > NOW() LIMIT 1",
+    [token]
+  );
+  return result.rows[0] || null;
+}
+
+async function updatePassword(userId, passwordHash) {
+  const result = await pool.query(
+    "UPDATE users SET password_hash = $1, reset_token = NULL, reset_token_expires = NULL WHERE id = $2 RETURNING id",
+    [passwordHash, userId]
+  );
+  return result.rowCount > 0;
+}
+
 module.exports = {
   createUser,
   findByEmail,
@@ -104,4 +152,10 @@ module.exports = {
   updateUserStatus,
   countUsersByRole,
   listPendingTeachers,
+  setVerificationToken,
+  findByVerificationToken,
+  markEmailVerified,
+  setResetToken,
+  findByResetToken,
+  updatePassword,
 };

@@ -21,6 +21,7 @@ const bookmarkRoutes = require("./routes/bookmarkRoutes");
 const discussionRoutes = require("./routes/discussionRoutes");
 const announcementRoutes = require("./routes/announcementRoutes");
 const searchRoutes = require("./routes/searchRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const { sendSuccess } = require("./utils/response");
@@ -129,6 +130,7 @@ app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/discussions", discussionRoutes);
 app.use("/api/announcements", announcementRoutes);
 app.use("/api/search", searchRoutes);
+app.use("/api/contact", contactRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

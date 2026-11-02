@@ -35,6 +35,37 @@ router.post(
 router.get("/me", protect, authController.getProfile);
 router.post("/logout", protect, authController.logout);
 
+router.post(
+  "/forgot-password",
+  [body("email").isEmail().withMessage("Valid email is required")],
+  validate,
+  authController.forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  [
+    body("token").notEmpty().withMessage("Reset token is required"),
+    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
+  ],
+  validate,
+  authController.resetPassword
+);
+
+router.post(
+  "/verify-email",
+  [body("token").notEmpty().withMessage("Verification token is required")],
+  validate,
+  authController.verifyEmail
+);
+
+router.post(
+  "/resend-verification",
+  [body("email").isEmail().withMessage("Valid email is required")],
+  validate,
+  authController.resendVerification
+);
+
 // Helper to determine primary frontend URL for redirects
 const getFrontendUrl = (req) => {
   const originEnv = process.env.CORS_ORIGIN || "http://localhost:5173";

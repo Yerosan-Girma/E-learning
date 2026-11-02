@@ -20,6 +20,8 @@ import CoursesPage from "./pages/CoursesPage";
 import HomePage from "./pages/HomePage";
 import LearningPage from "./pages/LearningPage";
 import LoginPage from "./pages/LoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import StudentDashboardPage from "./pages/StudentDashboardPage";
 import TeacherDashboardPage from "./pages/TeacherDashboardPage";
@@ -112,6 +114,8 @@ function AppShell() {
     (location.pathname.startsWith("/courses/") && location.pathname.endsWith("/dashboard")) ||
     location.pathname.startsWith("/learning/") ||
     location.pathname === "/login" ||
+    location.pathname === "/reset-password" ||
+    location.pathname === "/verify-email" ||
     location.pathname === "/auth/callback";
 
   return (
@@ -122,6 +126,8 @@ function AppShell() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/auth/callback" element={<GoogleCallback />} />
 
         <Route path="/courses" element={<CoursesPage />} />

@@ -5,8 +5,10 @@ const ApiError = require("../utils/ApiError");
 const paymentModel = require("../models/paymentModel");
 const enrollmentModel = require("../models/enrollmentModel");
 const courseModel = require("../models/courseModel");
+const userModel = require("../models/userModel");
 const { initializePayment } = require("../services/paymentGatewayService");
 const { getEffectiveCoursePrice, isCourseFree } = require("../services/courseAccessService");
+const emailService = require("../services/emailService");
 
 async function ensureEnrollmentStatus({ userId, courseId, status }) {
   const existingEnrollment = await enrollmentModel.findEnrollment({
@@ -91,6 +93,18 @@ const initializeCoursePayment = asyncHandler(async (req, res) => {
   });
 
   await ensureEnrollmentStatus({ userId: req.user.id, courseId, status: "approved" });
+
+  // Send enrollment confirmation email
+  emailService
+    .sendEnrollmentEmail({
+      studentEmail: req.user.email,
+      studentName: req.user.full_name,
+      courseTitle: course.title,
+      courseId: course.id,
+      amount,
+      isFree: false,
+    })
+    .catch((err) => console.error("[Payment] Enrollment email error:", err.message));
 
   return sendSuccess(
     res,
@@ -179,6 +193,27 @@ const updatePaymentStatus = asyncHandler(async (req, res) => {
     status: status === "completed" ? "approved" : "pending",
   });
 
+  if (status === "completed") {
+    // Look up user and course to send confirmation email
+    Promise.all([
+      userModel.findById(payment.user_id),
+      courseModel.getCourseById(payment.course_id),
+    ])
+      .then(([student, course]) => {
+        if (student && course) {
+          emailService.sendEnrollmentEmail({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+          });
+        }
+      })
+      .catch((err) => console.error("[PaymentStatus] Email notification error:", err.message));
+  }
+
   return sendSuccess(
     res,
     {
@@ -213,6 +248,27 @@ const handlePaymentWebhook = asyncHandler(async (req, res) => {
     courseId: payment.course_id,
     status: status === "completed" ? "approved" : "pending",
   });
+
+  if (status === "completed") {
+    // Look up user and course to send confirmation email
+    Promise.all([
+      userModel.findById(payment.user_id),
+      courseModel.getCourseById(payment.course_id),
+    ])
+      .then(([student, course]) => {
+        if (student && course) {
+          emailService.sendEnrollmentEmail({
+            studentEmail: student.email,
+            studentName: student.full_name,
+            courseTitle: course.title,
+            courseId: course.id,
+            amount: payment.amount,
+            isFree: false,
+          });
+        }
+      })
+      .catch((err) => console.error("[PaymentStatus] Email notification error:", err.message));
+  }
 
   return sendSuccess(res, {}, "Webhook processed");
 });

@@ -12,10 +12,10 @@ function getTransporter() {
     transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
+      secure: process.env.SMTP_SECURE === "true", // true for 465, false for 587
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS ? process.env.SMTP_PASS.replace(/\s+/g, "") : "",
+        user: process.env.SMTP_USER.trim(),
+        pass: process.env.SMTP_PASS.replace(/\s+/g, ""),
       },
     });
   } else {
@@ -37,7 +37,15 @@ function getTransporter() {
   return transporter;
 }
 
-const DEFAULT_FROM = process.env.EMAIL_FROM || '"EduLearn Platform" <no-reply@edulearn.com>';
+const DEFAULT_FROM = process.env.EMAIL_FROM || '"EduLearn Platform" <admin@edulearn.com>';
+const ADMIN_EMAIL = process.env.ADMIN_CONTACT_EMAIL || process.env.SMTP_USER || "admin@edulearn.com";
+
+function getClientUrl() {
+  const originEnv = process.env.CORS_ORIGIN || "https://e-learning-three-phi.vercel.app";
+  const origins = originEnv.split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean);
+  const prodOrigin = origins.find((o) => !o.includes("localhost") && !o.includes("127.0.0.1"));
+  return prodOrigin || origins[0] || "https://e-learning-three-phi.vercel.app";
+}
 
 /**
  * Base email layout wrapper
@@ -48,34 +56,43 @@ function emailTemplate({ title, body, actionButton }) {
     <html>
       <head>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #1e293b; }
-          .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-          .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .content { padding: 30px; line-height: 1.6; font-size: 15px; }
-          .btn { display: inline-block; padding: 12px 28px; background-color: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 50px; font-weight: 600; margin: 20px 0; }
-          .footer { background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b; }
-          .code-box { background: #f8fafc; border: 2px dashed #cbd5e1; padding: 15px; text-align: center; font-size: 28px; letter-spacing: 6px; font-weight: bold; color: #2563eb; margin: 20px 0; border-radius: 8px; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }
+          .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+          .header { background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: white; padding: 32px 24px; text-align: center; }
+          .header h1 { margin: 0; font-size: 26px; letter-spacing: -0.5px; }
+          .header p { margin: 6px 0 0 0; opacity: 0.9; font-size: 14px; }
+          .content { padding: 32px 28px; line-height: 1.65; font-size: 15px; color: #334155; }
+          .content h2 { margin-top: 0; color: #0f172a; font-size: 20px; font-weight: 700; }
+          .btn-container { text-align: center; margin: 28px 0; }
+          .btn { display: inline-block; padding: 13px 32px; background-color: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.25); }
+          .info-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin: 20px 0; }
+          .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #e2e8f0; }
+          .info-row:last-child { border-bottom: none; }
+          .footer { background-color: #f8fafc; padding: 24px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; }
+          .footer a { color: #2563eb; text-decoration: none; }
+          .code-box { background: #f8fafc; border: 2px dashed #93c5fd; padding: 16px; text-align: center; font-size: 30px; letter-spacing: 6px; font-weight: bold; color: #1d4ed8; margin: 24px 0; border-radius: 8px; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>EduLearn</h1>
+            <p>Empowering Your Learning Journey</p>
           </div>
           <div class="content">
             <h2>${title}</h2>
             ${body}
             ${
               actionButton
-                ? `<div style="text-align: center;"><a href="${actionButton.url}" class="btn" target="_blank">${actionButton.text}</a></div>`
+                ? `<div class="btn-container"><a href="${actionButton.url}" class="btn" target="_blank">${actionButton.text}</a></div>`
                 : ""
             }
           </div>
           <div class="footer">
             <p>&copy; ${new Date().getFullYear()} EduLearn Platform. All rights reserved.</p>
-            <p>If you didn't request this email, you can safely ignore it.</p>
+            <p>Questions? Contact us at <a href="mailto:${ADMIN_EMAIL}">${ADMIN_EMAIL}</a></p>
           </div>
         </div>
       </body>
@@ -83,16 +100,113 @@ function emailTemplate({ title, body, actionButton }) {
   `;
 }
 
-// 1. Email Verification
+async function safeSend(mailOptions) {
+  try {
+    const t = getTransporter();
+    const info = await t.sendMail(mailOptions);
+    console.log(`[EmailService] Email sent to ${mailOptions.to}: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`[EmailService] Failed sending to ${mailOptions.to}:`, error.message);
+    return { success: false, error: error.message };
+  }
+}
+
+// 1. Welcome Email for New Student Registration
+async function sendWelcomeEmail(toEmail, fullName = "Student", verificationToken = null) {
+  const clientUrl = getClientUrl();
+  const verifyUrl = verificationToken ? `${clientUrl}/verify-email?token=${verificationToken}` : `${clientUrl}/dashboard`;
+
+  const html = emailTemplate({
+    title: `Welcome to EduLearn, ${fullName}! 🎓`,
+    body: `
+      <p>Hello <strong>${fullName}</strong>,</p>
+      <p>Thank you for creating an account with <strong>EduLearn</strong>! We are excited to support your learning goals.</p>
+      <div class="info-card">
+        <p style="margin: 0 0 8px 0; font-weight: 600; color: #1e3a8a;">Here is how to get started:</p>
+        <ul style="margin: 0; padding-left: 20px; color: #475569;">
+          <li>Explore our comprehensive library of top courses.</li>
+          <li>Enroll in free or premium courses tailored to your interests.</li>
+          <li>Track your step-by-step progress and earn verified certificates.</li>
+        </ul>
+      </div>
+      <p>Click below to verify your email address and jump into your learning dashboard:</p>
+    `,
+    actionButton: {
+      text: verificationToken ? "Verify Email & Start Learning" : "Go to Dashboard",
+      url: verifyUrl,
+    },
+  });
+
+  return safeSend({
+    from: DEFAULT_FROM,
+    to: toEmail,
+    subject: "🎓 Welcome to EduLearn - Verify Your Email & Start Learning",
+    html,
+  });
+}
+
+// 2. Admin Alert: New Student / Instructor Registration
+async function sendAdminNewStudentEmail({ studentName, studentEmail, role = "student", registeredAt = new Date(), details = null }) {
+  const clientUrl = getClientUrl();
+  const roleLabel = role === "teacher" ? "Instructor Application" : "Student";
+
+  const html = emailTemplate({
+    title: `🔔 New ${roleLabel} Registered`,
+    body: `
+      <p>A new user has just registered on the EduLearn platform:</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b; width: 140px;">Full Name:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${studentName}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Email Address:</td>
+          <td style="padding: 8px 0; color: #0f172a;"><a href="mailto:${studentEmail}">${studentEmail}</a></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Account Role:</td>
+          <td style="padding: 8px 0; color: #0f172a;"><span style="background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; font-size: 12px;">${role}</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Registered At:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${new Date(registeredAt).toLocaleString()}</td>
+        </tr>
+        ${
+          details
+            ? `<tr>
+                <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Additional Info:</td>
+                <td style="padding: 8px 0; color: #0f172a;">${details}</td>
+              </tr>`
+            : ""
+        }
+      </table>
+      <p>You can review and manage this user in the Admin Dashboard.</p>
+    `,
+    actionButton: {
+      text: "View Admin Dashboard",
+      url: `${clientUrl}/dashboard/admin`,
+    },
+  });
+
+  return safeSend({
+    from: DEFAULT_FROM,
+    to: ADMIN_EMAIL,
+    subject: `[Admin Alert] New ${roleLabel}: ${studentName} (${studentEmail})`,
+    html,
+  });
+}
+
+// 3. Email Verification Email
 async function sendVerificationEmail(toEmail, verificationToken, fullName = "Student") {
-  const clientUrl = process.env.CORS_ORIGIN?.split(",")[0] || "https://e-learning-three-phi.vercel.app";
+  const clientUrl = getClientUrl();
   const verifyUrl = `${clientUrl}/verify-email?token=${verificationToken}`;
 
   const html = emailTemplate({
     title: "Verify Your Email Address",
     body: `
       <p>Hello ${fullName},</p>
-      <p>Thank you for signing up for EduLearn! Please verify your email address to activate your account and start your courses.</p>
+      <p>Thank you for signing up for EduLearn! Please verify your email address to confirm your account and get access to all features.</p>
       <p>Click the button below to confirm your email:</p>
     `,
     actionButton: {
@@ -101,7 +215,7 @@ async function sendVerificationEmail(toEmail, verificationToken, fullName = "Stu
     },
   });
 
-  return getTransporter().sendMail({
+  return safeSend({
     from: DEFAULT_FROM,
     to: toEmail,
     subject: "EduLearn - Verify Your Email Address",
@@ -109,17 +223,18 @@ async function sendVerificationEmail(toEmail, verificationToken, fullName = "Stu
   });
 }
 
-// 2. Password Reset
-async function sendPasswordResetEmail(toEmail, resetToken) {
-  const clientUrl = process.env.CORS_ORIGIN?.split(",")[0] || "https://e-learning-three-phi.vercel.app";
+// 4. Password Reset Email
+async function sendPasswordResetEmail(toEmail, resetToken, fullName = "Student") {
+  const clientUrl = getClientUrl();
   const resetUrl = `${clientUrl}/reset-password?token=${resetToken}`;
 
   const html = emailTemplate({
-    title: "Password Reset Request",
+    title: "Reset Your Password 🔐",
     body: `
-      <p>Hello,</p>
-      <p>We received a request to reset the password for your EduLearn account.</p>
-      <p>Click the button below to set a new password. This link will expire in 1 hour.</p>
+      <p>Hello ${fullName},</p>
+      <p>We received a request to reset the password for your EduLearn account associated with <strong>${toEmail}</strong>.</p>
+      <p>Click the button below to set a new password. For security reasons, this link will expire in <strong>1 hour</strong>.</p>
+      <p style="color: #64748b; font-size: 13px;">If you did not request a password reset, you can safely ignore this email — your account remains secure.</p>
     `,
     actionButton: {
       text: "Reset Password",
@@ -127,7 +242,7 @@ async function sendPasswordResetEmail(toEmail, resetToken) {
     },
   });
 
-  return getTransporter().sendMail({
+  return safeSend({
     from: DEFAULT_FROM,
     to: toEmail,
     subject: "EduLearn - Password Reset Instructions",
@@ -135,31 +250,105 @@ async function sendPasswordResetEmail(toEmail, resetToken) {
   });
 }
 
-// 3. Contact Form Submission
-async function sendContactFormEmail({ name, email, subject, message }) {
-  const adminEmail = process.env.ADMIN_CONTACT_EMAIL || process.env.SMTP_USER;
+// 5. New Course Enrollment Confirmation
+async function sendEnrollmentEmail({ studentEmail, studentName = "Student", courseTitle, courseId, amount = 0, isFree = true }) {
+  const clientUrl = getClientUrl();
+  const courseUrl = `${clientUrl}/courses/${courseId}/dashboard`;
 
   const html = emailTemplate({
-    title: "New Contact Message",
+    title: "Enrollment Confirmed! 🎉",
     body: `
-      <p><strong>From:</strong> ${name} (<a href="mailto:${email}">${email}</a>)</p>
-      <p><strong>Subject:</strong> ${subject || "No subject"}</p>
-      <div style="background: #f8fafc; padding: 15px; border-left: 4px solid #2563eb; margin: 15px 0;">
-        ${message.replace(/\n/g, "<br>")}
+      <p>Hello <strong>${studentName}</strong>,</p>
+      <p>Congratulations! You have successfully enrolled in:</p>
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
+        <h3 style="margin: 0 0 6px 0; color: #166534; font-size: 18px;">${courseTitle}</h3>
+        <p style="margin: 0; color: #15803d; font-size: 14px;">
+          <strong>Access:</strong> Lifetime &bull; 
+          <strong>Price:</strong> ${isFree ? "Free Course" : `$${Number(amount).toFixed(2)}`} &bull; 
+          <strong>Date:</strong> ${new Date().toLocaleDateString()}
+        </p>
       </div>
+      <p>Your interactive learning dashboard and step-by-step curriculum are now unlocked. Start learning right away!</p>
     `,
+    actionButton: {
+      text: "Start Course Now →",
+      url: courseUrl,
+    },
   });
 
-  return getTransporter().sendMail({
+  return safeSend({
     from: DEFAULT_FROM,
-    to: adminEmail,
-    replyTo: email,
-    subject: `[Contact Form] ${subject || "New Message"} - from ${name}`,
+    to: studentEmail,
+    subject: `🎉 Enrollment Confirmed: ${courseTitle}`,
     html,
   });
 }
 
-// 4. Notifications (Enrollment / Order / Certificate)
+// 6. Contact Form: Deliver to Admin
+async function sendContactFormEmail({ name, email, subject, message }) {
+  const html = emailTemplate({
+    title: "New Contact Message 📩",
+    body: `
+      <p>You have received a new inquiry from the EduLearn website contact form:</p>
+      <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b; width: 120px;">From:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${name}</td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Email:</td>
+          <td style="padding: 8px 0; color: #0f172a;"><a href="mailto:${email}">${email}</a></td>
+        </tr>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Subject:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${subject || "General Inquiry"}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Date:</td>
+          <td style="padding: 8px 0; color: #0f172a;">${new Date().toLocaleString()}</td>
+        </tr>
+      </table>
+      <div style="background: #f8fafc; padding: 18px; border-left: 4px solid #2563eb; border-radius: 4px; margin: 16px 0; font-size: 15px; color: #1e293b;">
+        ${message.replace(/\n/g, "<br>")}
+      </div>
+      <p style="color: #64748b; font-size: 13px;">You can directly reply to this email to contact ${name}.</p>
+    `,
+  });
+
+  return safeSend({
+    from: DEFAULT_FROM,
+    to: ADMIN_EMAIL,
+    replyTo: email,
+    subject: `📩 [Contact Form] ${subject || "Inquiry from " + name}`,
+    html,
+  });
+}
+
+// 7. Contact Form: Auto-Acknowledgment to Visitor
+async function sendContactAcknowledgmentEmail({ name, email, subject }) {
+  const html = emailTemplate({
+    title: "Thank You for Contacting EduLearn!",
+    body: `
+      <p>Hello ${name},</p>
+      <p>Thank you for reaching out to us. We have received your message regarding <strong>${subject || "your inquiry"}</strong>.</p>
+      <div class="info-card">
+        <p style="margin: 0; color: #334155;">
+          Our support team is reviewing your message and will respond as quickly as possible, typically within 24 hours.
+        </p>
+      </div>
+      <p>If you have urgent questions, feel free to review our courses and Help Center in the meantime.</p>
+    `,
+  });
+
+  return safeSend({
+    from: DEFAULT_FROM,
+    to: email,
+    subject: "EduLearn - We Received Your Message",
+    html,
+  });
+}
+
+// 8. General Notification
 async function sendNotificationEmail({ to, subject, title, message, actionUrl, actionText }) {
   const html = emailTemplate({
     title,
@@ -167,7 +356,7 @@ async function sendNotificationEmail({ to, subject, title, message, actionUrl, a
     actionButton: actionUrl && actionText ? { url: actionUrl, text: actionText } : null,
   });
 
-  return getTransporter().sendMail({
+  return safeSend({
     from: DEFAULT_FROM,
     to,
     subject,
@@ -175,7 +364,7 @@ async function sendNotificationEmail({ to, subject, title, message, actionUrl, a
   });
 }
 
-// 5. One-Time Password (OTP)
+// 9. OTP Code
 async function sendOtpEmail(toEmail, otpCode) {
   const html = emailTemplate({
     title: "Your One-Time Verification Code",
@@ -187,7 +376,7 @@ async function sendOtpEmail(toEmail, otpCode) {
     `,
   });
 
-  return getTransporter().sendMail({
+  return safeSend({
     from: DEFAULT_FROM,
     to: toEmail,
     subject: `EduLearn - Your Verification Code is ${otpCode}`,
@@ -196,10 +385,13 @@ async function sendOtpEmail(toEmail, otpCode) {
 }
 
 module.exports = {
+  sendWelcomeEmail,
+  sendAdminNewStudentEmail,
   sendVerificationEmail,
   sendPasswordResetEmail,
+  sendEnrollmentEmail,
   sendContactFormEmail,
+  sendContactAcknowledgmentEmail,
   sendNotificationEmail,
   sendOtpEmail,
 };
-

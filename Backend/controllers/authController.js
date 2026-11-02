@@ -40,9 +40,37 @@ const logout = asyncHandler(async (req, res) => {
   return sendSuccess(res, {}, "Logout successful");
 });
 
+const forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const result = await authService.forgotPassword({ email });
+  return sendSuccess(res, {}, result.message);
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token, password } = req.body;
+  const result = await authService.resetPassword({ token, password });
+  return sendSuccess(res, {}, result.message);
+});
+
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const result = await authService.verifyEmail({ token });
+  return sendSuccess(res, {}, result.message);
+});
+
+const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const result = await authService.resendVerification({ email });
+  return sendSuccess(res, {}, result.message);
+});
+
 module.exports = {
   register,
   login,
   getProfile,
   logout,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+  resendVerification,
 };

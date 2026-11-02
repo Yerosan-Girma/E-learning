@@ -155,6 +155,22 @@ async function ensureSchema() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS proposed_course TEXT`,
     [PostgresErrorCodes.UNDEFINED_TABLE]
   );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS verification_token VARCHAR(255)`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token VARCHAR(255)`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
+  await runMigration(
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires TIMESTAMP`,
+    [PostgresErrorCodes.UNDEFINED_TABLE]
+  );
 
   // Add level column to courses if it doesn't exist
   await runMigration(

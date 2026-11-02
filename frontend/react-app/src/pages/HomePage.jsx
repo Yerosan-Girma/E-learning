@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import CourseCard from "../components/common/CourseCard";
 import { FEATURED_COURSES } from "../data/courses";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 
 const statsTargets = {
   students: 50000,
@@ -64,18 +65,27 @@ export default function HomePage() {
     [stats]
   );
 
-  const handleContactSubmit = (event) => {
+  const [contactLoading, setContactLoading] = useState(false);
+
+  const handleContactSubmit = async (event) => {
     event.preventDefault();
+    setContactLoading(true);
 
-    notify("Thanks for contacting EduLearn. Our support team will reach out soon.", "success");
-
-    setContactForm({
-      name: "",
-      email: "",
-      subject: "",
-      message: "",
-      newsletter: false,
-    });
+    try {
+      await api.submitContactForm(contactForm);
+      notify("Thanks for reaching out! Your message has been sent to our team.", "success");
+      setContactForm({
+        name: "",
+        email: "",
+        subject: "",
+        message: "",
+        newsletter: false,
+      });
+    } catch (err) {
+      notify(err.message || "Failed to send message. Please try again.", "danger");
+    } finally {
+      setContactLoading(false);
+    }
   };
 
   return (
@@ -331,8 +341,17 @@ export default function HomePage() {
                       </label>
                     </div>
 
-                    <button type="submit" className="btn btn-primary btn-lg">
-                      <i className="fas fa-paper-plane me-2" /> Send Message
+                    <button type="submit" className="btn btn-primary btn-lg" disabled={contactLoading}>
+                      {contactLoading ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                          Sending Message...
+                        </>
+                      ) : (
+                        <>
+                          <i className="fas fa-paper-plane me-2" /> Send Message
+                        </>
+                      )}
                     </button>
                   </form>
                 </div>

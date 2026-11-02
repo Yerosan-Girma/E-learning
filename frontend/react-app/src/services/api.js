@@ -150,4 +150,18 @@ export const api = {
     request(`/certificates/verify/${verificationCode}`),
   getCourseCertificates: (courseId) =>
     request(`/certificates/courses/${courseId}`),
+
+  // Auth / Email verification & Password Reset
+  forgotPassword: (email) =>
+    request("/auth/forgot-password", { method: "POST", body: { email } }),
+  resetPassword: (token, password) =>
+    request("/auth/reset-password", { method: "POST", body: { token, password } }),
+  verifyEmail: (token) =>
+    request("/auth/verify-email", { method: "POST", body: { token } }),
+  resendVerification: (email) =>
+    request("/auth/resend-verification", { method: "POST", body: { email } }),
+
+  // Contact form submission
+  submitContactForm: (data) =>
+    request("/contact", { method: "POST", body: data }),
 };

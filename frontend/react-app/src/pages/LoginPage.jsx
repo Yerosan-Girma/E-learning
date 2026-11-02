@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../services/api";
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -30,7 +31,7 @@ export default function LoginPage() {
     }
   }, [searchParams, notify]);
 
-  const [tab, setTab] = useState("signin"); // "signin" | "signup"
+  const [tab, setTab] = useState("signin"); // "signin" | "signup" | "forgot"
   const [loading, setLoading] = useState(false);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -39,6 +40,8 @@ export default function LoginPage() {
   const [signUpForm, setSignUpForm] = useState({
     fullName: "", email: "", password: "", confirmPassword: "",
   });
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotSent, setForgotSent] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) navigate(dashboardPath);
@@ -48,6 +51,25 @@ export default function LoginPage() {
     setTab(next);
     setShowPwd(false);
     setShowConfirm(false);
+    setForgotSent(false);
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      notify("Please enter your email address.", "danger");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.forgotPassword(forgotEmail);
+      setForgotSent(true);
+      notify("Password reset instructions have been sent to your email!", "success");
+    } catch (err) {
+      notify(err.message || "Failed to request password reset.", "danger");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignIn = async (e) => {
@@ -102,43 +124,53 @@ export default function LoginPage() {
                   </span>
                 </Link>
                 <p className="text-muted small mt-2 mb-0">
-                  {tab === "signin" ? "Sign in to your account" : "Create your account"}
+                  {tab === "signin"
+                    ? "Sign in to your account"
+                    : tab === "signup"
+                    ? "Create your account"
+                    : "Reset your password"}
                 </p>
               </div>
 
               {/* Sign In / Sign Up tabs */}
-              <ul className="nav nav-pills nav-fill mb-4"
-                style={{ background: "#f1f3f5", padding: "4px", borderRadius: "8px" }}>
-                <li className="nav-item">
-                  <button type="button"
-                    className={`nav-link py-2 ${tab === "signin" ? "active shadow-sm" : "text-muted"}`}
-                    style={{ borderRadius: "6px", fontWeight: 500 }}
-                    onClick={() => switchTab("signin")}>
-                    Sign In
-                  </button>
-                </li>
-                <li className="nav-item">
-                  <button type="button"
-                    className={`nav-link py-2 ${tab === "signup" ? "active shadow-sm" : "text-muted"}`}
-                    style={{ borderRadius: "6px", fontWeight: 500 }}
-                    onClick={() => switchTab("signup")}>
-                    Sign Up
-                  </button>
-                </li>
-              </ul>
+              {tab !== "forgot" && (
+                <ul className="nav nav-pills nav-fill mb-4"
+                  style={{ background: "#f1f3f5", padding: "4px", borderRadius: "8px" }}>
+                  <li className="nav-item">
+                    <button type="button"
+                      className={`nav-link py-2 ${tab === "signin" ? "active shadow-sm" : "text-muted"}`}
+                      style={{ borderRadius: "6px", fontWeight: 500 }}
+                      onClick={() => switchTab("signin")}>
+                      Sign In
+                    </button>
+                  </li>
+                  <li className="nav-item">
+                    <button type="button"
+                      className={`nav-link py-2 ${tab === "signup" ? "active shadow-sm" : "text-muted"}`}
+                      style={{ borderRadius: "6px", fontWeight: 500 }}
+                      onClick={() => switchTab("signup")}>
+                      Sign Up
+                    </button>
+                  </li>
+                </ul>
+              )}
 
               {/* Google */}
-              <a href={GOOGLE_AUTH_URL}
-                className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
-                <GoogleIcon />
-                {tab === "signin" ? "Continue with Google" : "Sign up with Google"}
-              </a>
+              {tab !== "forgot" && (
+                <>
+                  <a href={GOOGLE_AUTH_URL}
+                    className="btn btn-outline-dark w-100 d-flex align-items-center justify-content-center gap-2 mb-3">
+                    <GoogleIcon />
+                    {tab === "signin" ? "Continue with Google" : "Sign up with Google"}
+                  </a>
 
-              <div className="d-flex align-items-center mb-3">
-                <hr className="flex-grow-1 m-0" />
-                <span className="px-3 text-muted small">or</span>
-                <hr className="flex-grow-1 m-0" />
-              </div>
+                  <div className="d-flex align-items-center mb-3">
+                    <hr className="flex-grow-1 m-0" />
+                    <span className="px-3 text-muted small">or</span>
+                    <hr className="flex-grow-1 m-0" />
+                  </div>
+                </>
+              )}
 
               {/* ── Sign In form ── */}
               {tab === "signin" && (
@@ -151,7 +183,13 @@ export default function LoginPage() {
                       onChange={(e) => setSignInForm((p) => ({ ...p, email: e.target.value }))} />
                   </div>
                   <div className="mb-4">
-                    <label htmlFor="si-password" className="form-label fw-medium">Password</label>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <label htmlFor="si-password" className="form-label fw-medium mb-0">Password</label>
+                      <button type="button" className="btn btn-link btn-sm p-0 text-decoration-none"
+                        onClick={() => switchTab("forgot")}>
+                        Forgot password?
+                      </button>
+                    </div>
                     <div className="input-group">
                       <input id="si-password" type={showPwd ? "text" : "password"}
                         className="form-control" required autoComplete="current-password"
@@ -177,7 +215,54 @@ export default function LoginPage() {
                 </form>
               )}
 
-              {/* ── Sign Up form ── */}
+              {/* ── Forgot Password form ── */}
+              {tab === "forgot" && (
+                <form onSubmit={handleForgotPassword} noValidate>
+                  {forgotSent ? (
+                    <div className="alert alert-success text-center p-3 mb-4 rounded-3 border-0 shadow-sm" style={{ background: "#ecfdf5", color: "#065f46" }}>
+                      <i className="fas fa-check-circle fa-2x mb-2 text-success d-block" />
+                      <p className="mb-1 fw-bold fs-6">Reset link sent!</p>
+                      <p className="small mb-0 opacity-90">
+                        We sent password reset instructions to <strong>{forgotEmail}</strong>. Please check your inbox and follow the link.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-muted small mb-3">
+                        Enter your account email and we'll send you a secure link to reset your password.
+                      </p>
+                      <div className="mb-4">
+                        <label htmlFor="fp-email" className="form-label fw-medium">Email address</label>
+                        <input
+                          id="fp-email"
+                          type="email"
+                          className="form-control"
+                          required
+                          autoComplete="email"
+                          placeholder="you@example.com"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                        />
+                      </div>
+                      <button type="submit" className="btn btn-primary w-100" disabled={loading}>
+                        {loading ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                            Sending Reset Link…
+                          </>
+                        ) : (
+                          "Send Reset Link"
+                        )}
+                      </button>
+                    </>
+                  )}
+                  <p className="text-center text-muted small mt-4 mb-0">
+                    Remember your password?{" "}
+                    <button type="button" className="btn btn-link btn-sm p-0 fw-semibold"
+                      onClick={() => switchTab("signin")}>Back to Sign In</button>
+                  </p>
+                </form>
+              )}
               {tab === "signup" && (
                 <form onSubmit={handleSignUp} noValidate>
                   <div className="mb-3">
