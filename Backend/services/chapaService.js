@@ -11,13 +11,17 @@ function isChapaConfigured() {
   return Boolean(CHAPA_SECRET_KEY);
 }
 
+let txCounter = 0;
+
 /**
  * Generate a valid Chapa transaction reference (strictly <= 20 characters)
+ * Combines high-resolution timestamp with atomic sequence to prevent millisecond collisions
  */
 function generateTxRef(prefix = "edl") {
-  // e.g. edl-179365827165 -> 16 chars
-  const timestamp = Date.now().toString().slice(-12);
-  return `${prefix}-${timestamp}`;
+  txCounter = (txCounter + 1) % 10000;
+  const time = Date.now().toString().slice(-8);
+  const seq = txCounter.toString().padStart(4, "0");
+  return `${prefix}-${time}${seq}`;
 }
 
 /**
