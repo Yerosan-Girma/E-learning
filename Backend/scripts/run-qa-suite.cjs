@@ -9,6 +9,10 @@ const rootDir = path.resolve(__dirname, '../..');
 const backendDir = path.resolve(__dirname, '..');
 
 require(path.join(backendDir, 'node_modules/dotenv')).config({ path: path.join(backendDir, '.env') });
+// Explicitly disable outbound email in automated test harness to avoid test bounce loops
+process.env.NODE_ENV = 'test';
+process.env.DISABLE_EMAIL = 'true';
+
 const http = require('http');
 const assert = require('assert');
 const { Pool } = require(path.join(backendDir, 'node_modules/pg'));

@@ -128,7 +128,42 @@ function emailTemplate({ title, body, actionButton }) {
   `;
 }
 
+/**
+ * Detect test, dummy, or invalid domains that would fail or bounce in Gmail/SMTP
+ */
+function isTestOrDummyEmail(email) {
+  if (!email || typeof email !== "string") return true;
+  const clean = email.trim().toLowerCase();
+  if (
+    clean.endsWith(".test") ||
+    clean.endsWith(".example") ||
+    clean.endsWith(".invalid") ||
+    clean.endsWith(".localhost") ||
+    clean.includes("edulearn.test") ||
+    clean.includes("example.com") ||
+    clean.includes("test.com") ||
+    clean.startsWith("tester@") ||
+    clean.startsWith("qa-student") ||
+    clean.includes("@test.")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 async function safeSend(mailOptions) {
+  // Prevent sending real emails during test runs or to dummy test addresses (stops Gmail bounce loops)
+  if (
+    process.env.NODE_ENV === "test" ||
+    process.env.DISABLE_EMAIL === "true" ||
+    isTestOrDummyEmail(mailOptions.to)
+  ) {
+    console.log(
+      `[EmailService] Simulated delivery to: ${mailOptions.to} (${mailOptions.subject}) — suppressed real SMTP to prevent bounces.`
+    );
+    return { success: true, messageId: "simulated-test-" + Date.now(), simulated: true };
+  }
+
   const clientUrl = getClientUrl();
   const vercelRelayUrl = `${clientUrl}/api/send-email`;
 
@@ -210,6 +245,12 @@ async function sendWelcomeEmail(toEmail, fullName = "Student", verificationToken
 
 // 2. Admin Alert: New Student / Instructor Registration
 async function sendAdminNewStudentEmail({ studentName, studentEmail, role = "student", registeredAt = new Date(), details = null }) {
+  // Only notify admin for teacher applications or if explicitly enabled, preventing student signup inbox clutter
+  if (role !== "teacher" && process.env.NOTIFY_ADMIN_ON_REGISTRATION !== "true") {
+    console.log(`[EmailService] Admin registration alert skipped (NOTIFY_ADMIN_ON_REGISTRATION is not true).`);
+    return { success: true, skipped: true };
+  }
+
   const clientUrl = getClientUrl();
   const roleLabel = role === "teacher" ? "Instructor Application" : "Student";
 
@@ -356,6 +397,11 @@ async function sendAdminEnrollmentAlert({
   isFree = true,
   enrollmentType = "free",
 }) {
+  if (process.env.NOTIFY_ADMIN_ON_ENROLLMENT !== "true") {
+    console.log(`[EmailService] Admin enrollment alert skipped (NOTIFY_ADMIN_ON_ENROLLMENT is not true).`);
+    return { success: true, skipped: true };
+  }
+
   const clientUrl = getClientUrl();
   const html = emailTemplate({
     title: "🔔 New Course Enrollment",
@@ -405,46 +451,74 @@ async function sendAdminEnrollmentAlert({
 
 // 7. Contact Form: Deliver to Admin
 async function sendContactFormEmail({ name, email, subject, message }) {
+  const senderName = (name || "Website Visitor").trim();
+  const senderEmail = (email || "no-reply@edulearn.com").trim();
+  const subjectLine = subject ? subject.trim() : "General Inquiry";
+
+  // Display visitor name prominently in From header so Gmail does NOT display "me" or "EduLearn Platform"
+  const fromHeader = SMTP_USER
+    ? `"${senderName} (via EduLearn)" <${SMTP_USER}>`
+    : DEFAULT_FROM;
+
   const html = emailTemplate({
-    title: "New Contact Message 📩",
+    title: `📩 New Message from ${senderName}`,
     body: `
-      <p>You have received a new inquiry from the EduLearn website contact form:</p>
+      <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 14px 18px; margin-bottom: 20px; border-radius: 4px;">
+        <p style="margin: 0; font-size: 14px; font-weight: bold; color: #1e40af;">
+          🌐 Message Origin: EduLearn Website Contact Form
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: #3b82f6;">
+          A visitor submitted this message through the contact form at <a href="https://e-learning-three-phi.vercel.app/contact" style="color: #1d4ed8; text-decoration: underline;">edulearn/contact</a>.
+        </p>
+      </div>
+
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px;">
         <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 0; font-weight: 600; color: #64748b; width: 120px;">From:</td>
-          <td style="padding: 8px 0; color: #0f172a;">${name}</td>
+          <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 140px;">Sender Name:</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 700; font-size: 15px;">${senderName}</td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Email:</td>
-          <td style="padding: 8px 0; color: #0f172a;"><a href="mailto:${email}">${email}</a></td>
+          <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Sender Email:</td>
+          <td style="padding: 10px 0; color: #2563eb; font-weight: 600;">
+            <a href="mailto:${senderEmail}" style="color: #2563eb; text-decoration: none;">${senderEmail}</a>
+          </td>
         </tr>
         <tr style="border-bottom: 1px solid #e2e8f0;">
-          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Subject:</td>
-          <td style="padding: 8px 0; color: #0f172a;">${subject || "General Inquiry"}</td>
+          <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Subject:</td>
+          <td style="padding: 10px 0; color: #0f172a; font-weight: 600;">${subjectLine}</td>
         </tr>
         <tr>
-          <td style="padding: 8px 0; font-weight: 600; color: #64748b;">Date:</td>
-          <td style="padding: 8px 0; color: #0f172a;">${new Date().toLocaleString()}</td>
+          <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Received At:</td>
+          <td style="padding: 10px 0; color: #0f172a;">${new Date().toLocaleString()}</td>
         </tr>
       </table>
-      <div style="background: #f8fafc; padding: 18px; border-left: 4px solid #2563eb; border-radius: 4px; margin: 16px 0; font-size: 15px; color: #1e293b;">
+
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #10b981; padding: 18px; margin: 20px 0; border-radius: 6px; font-size: 15px; color: #1e293b; line-height: 1.6;">
+        <div style="font-size: 12px; font-weight: bold; text-transform: uppercase; color: #059669; margin-bottom: 8px;">Visitor's Message:</div>
         ${message.replace(/\n/g, "<br>")}
       </div>
-      <p style="color: #64748b; font-size: 13px;">You can directly reply to this email to contact ${name}.</p>
+
+      <div style="margin-top: 24px; padding: 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 13px; color: #166534;">
+        💬 <strong>How to Reply:</strong> Click <strong>Reply</strong> in your email client. Your response will go directly to <strong>${senderName}</strong> (<a href="mailto:${senderEmail}" style="color: #166534; font-weight: bold;">${senderEmail}</a>).
+      </div>
     `,
   });
 
   return safeSend({
-    from: DEFAULT_FROM,
+    from: fromHeader,
     to: ADMIN_EMAIL,
-    replyTo: email,
-    subject: `📩 [Contact Form] ${subject || "Inquiry from " + name}`,
+    replyTo: `"${senderName}" <${senderEmail}>`,
+    subject: `📩 [Website Message] from ${senderName} (${senderEmail}): ${subjectLine}`,
     html,
   });
 }
 
 // 7. Contact Form: Auto-Acknowledgment to Visitor
 async function sendContactAcknowledgmentEmail({ name, email, subject }) {
+  if (isTestOrDummyEmail(email)) {
+    console.log(`[EmailService] Visitor acknowledgment skipped for dummy/test email: ${email}`);
+    return { success: true, messageId: "simulated-visitor-ack" };
+  }
   const html = emailTemplate({
     title: "Thank You for Contacting EduLearn!",
     body: `
